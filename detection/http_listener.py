@@ -1,5 +1,5 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from ..utils import WeakThreadLoop
+import threading
 import weakref
 from .. import app
 
@@ -42,3 +42,21 @@ class HTTPListener:
                 return
 
         return WebRequestHandler
+
+class WeakThreadLoop(threading.Thread):
+    def __init__(self, method, delay: float, name = None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if name:
+            self.name = name
+        self.daemon = True
+        self._delay = delay
+
+        import weakref
+        self._method = weakref.WeakMethod(method)
+        self.start()
+
+    def run(self):
+        while self._method() is not None:
+            self._method()()
+            threading.Event().wait(self._delay)
+        del self._method

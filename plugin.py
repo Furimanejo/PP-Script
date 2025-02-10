@@ -4,6 +4,8 @@ class Detector():
 
 class PluginBase():
     def __init__(self, plugin_folder_path):
+        return 
+    
         import os.path as path
         plugin_def_path = path.join(plugin_folder_path, "plugin.py")
         with open(plugin_def_path, "r", encoding="utf-8") as file:
@@ -20,5 +22,5 @@ class PluginBase():
             detector = Detector()
             plugin_globals.update({'detect': detector.detect})
 
-plugin = PluginBase("plugin1")
-plugin.update()
+    def update(self):
+        print("plugin did not define the update method")
