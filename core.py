@@ -107,7 +107,7 @@ class EventDefinition:
             return Event(self)
         return None
 
-class BufferedVariable:
+class PPVariable:
     import time as _time
 
     def __init__(self, buffer_length: float = 0, tolerance: float = float('inf')) -> None:

@@ -1,29 +1,34 @@
 from pymem import Pymem
 from pymem.process import module_from_name
 from pymem.exception import ProcessNotFound, MemoryReadError
-from .. import app
+import logging
+
+__all__ = ["ProcessMemoryReader"]
 
 class ProcessMemoryReader:
     def __init__(self, process_name, variables) -> None:
         self.process_name = process_name
         self.variables = variables
         self.process_memory = None
+        self.logger = logging.getLogger("app.process_memory_reader")
+        self.logger.setLevel(logging.DEBUG)
+        self.logger.debug("PMR logger started")
 
     def check_process_memory(self):
         if self.process_memory is None:
             try:
                 self.process_memory = Pymem(self.process_name)
-                app.logger.info(f"Found process: {self.process_name}")
+                self.logger.info(f"Found process: {self.process_name}")
             except ProcessNotFound:
                 pass
         return self.process_memory is not None
 
     def read_variable(self, name, debug=False):
         if debug:
-            app.logger.debug(f"Try reading variable: {name}")
+            self.logger.debug(f"Try reading variable: {name}")
         if not self.check_process_memory():
             if debug:
-                app.logger.debug("process not found")
+                self.logger.debug("process not found")
             return None
 
         v = self.variables[name]
@@ -38,17 +43,17 @@ class ProcessMemoryReader:
                 raise e
         if address is None:
             if debug:
-                app.logger.debug(f"{name} module not found")
+                self.logger.debug(f"{name} module not found")
             return None
 
         if debug:
-            app.logger.debug(f"Addr: {hex(address)}")
+            self.logger.debug(f"Addr: {hex(address)}")
         try:
             for offset in v["offsets"][:-1]:
                 # read pointers as longlong(8bits)
                 address = self.process_memory.read_longlong(address + offset) 
                 if debug:
-                    app.logger.debug(f"Addr: {hex(address)}")
+                    self.logger.debug(f"Addr: {hex(address)}")
         except Exception as e:
             pass
             
@@ -75,5 +80,5 @@ class ProcessMemoryReader:
                 raise e
 
         if debug:
-            app.logger.debug(f"{name} at addr {hex(address)} = {result}")
+            self.logger.debug(f"{name} at addr {hex(address)} = {result}")
         return result
