@@ -4,13 +4,27 @@ def _plugin_file_in_folder(folder_path:str):
     return os_path.join(folder_path, _plugin_file_name)
 
 import logging
-logger = logging.getLogger("app.generic_plugin")
+logger = logging.getLogger("app.plugins")
 logger.setLevel(logging.DEBUG)
 
-class GenericPlugin():
+class BasePlugin():
+    def __init__(self):
+        pass
+
+    def detect(self):
+        print("plugin did not define the detect method")
+    
+    def update(self):
+        self.detect()
+
+    def append_event(self, name: str):
+        print(name)
+
+class ImportablePlugin(BasePlugin):
     path = None
 
     def __init__(self):
+        super().__init__()
         with open(_plugin_file_in_folder(self.path), "r", encoding="utf-8") as file:
             plugin_as_text = file.read()
             from RestrictedPython import compile_restricted, safe_globals
@@ -24,8 +38,8 @@ class GenericPlugin():
             safe_globals['_iter_unpack_sequence_'] = guarded_iter_unpack_sequence
             safe_globals['getattr'] = safer_getattr
 
-            from .detection_imports import imported_dict
-            plugin_globals |= imported_dict
+            from .detection_imports import imports_as_dict
+            plugin_globals |= imports_as_dict
             
             plugin_globals["log_debug"] = logger.debug
             plugin_globals["append_event"] = self.append_event
@@ -35,25 +49,13 @@ class GenericPlugin():
             exec(compiled_plugin, plugin_globals, plugin_locals)
             self.detect = plugin_locals["detect"]
             #self.__dict__.update(plugin_locals)
-        pass
 
-    def detect():
-        print("plugin did not define the detect method")
-        pass
-    
-    def update(self):
-        self.detect()
-
-    def append_event(self, name: str):
-        print(name)
-        pass
-
-def try_import_plugin_at_folder(folder_path:str) -> GenericPlugin | None:
+def try_import_plugin_at_folder(folder_path:str) -> ImportablePlugin | None:
     if not os_path.exists(_plugin_file_in_folder(folder_path)):
-        print("No plugin.py file, not a plugin folder")
+        logger.warning("No plugin.py file, not a plugin folder")
         return None
     
-    class ImportedPlugin(GenericPlugin):
+    class ImportedPlugin(ImportablePlugin):
         path = folder_path
     
     return ImportedPlugin

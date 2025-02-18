@@ -12,7 +12,6 @@ class ProcessMemoryReader:
         self.process_memory = None
         self.logger = logging.getLogger("app.process_memory_reader")
         self.logger.setLevel(logging.DEBUG)
-        self.logger.debug("PMR logger started")
 
     def check_process_memory(self):
         if self.process_memory is None:
