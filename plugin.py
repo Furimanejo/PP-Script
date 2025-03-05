@@ -4,21 +4,25 @@ def _plugin_file_in_folder(folder_path:str):
     return os_path.join(folder_path, _plugin_file_name)
 
 import logging
-logger = logging.getLogger("app.plugins")
+logger = logging.getLogger("app.plugin")
 logger.setLevel(logging.DEBUG)
 
 class BasePlugin():
     def __init__(self):
-        pass
+        super().__init__()
+        self.events = {}
 
     def detect(self):
-        print("plugin did not define the detect method")
+        logger.warning("plugin did not define the detect method")
     
     def update(self):
         self.detect()
 
     def append_event(self, name: str):
         print(name)
+
+    def print_events(self):
+        print(self.events)
 
 class ImportablePlugin(BasePlugin):
     path = None
@@ -42,20 +46,20 @@ class ImportablePlugin(BasePlugin):
             plugin_globals |= imports_as_dict
             
             plugin_globals["log_debug"] = logger.debug
-            plugin_globals["append_event"] = self.append_event
-            plugin_globals["path"] = self.path
 
             plugin_locals = {}
             exec(compiled_plugin, plugin_globals, plugin_locals)
-            self.detect = plugin_locals["detect"]
-            #self.__dict__.update(plugin_locals)
+            self.__dict__.update(plugin_locals)
 
-def try_import_plugin_at_folder(folder_path:str) -> ImportablePlugin | None:
+def try_import_plugin_at_folder(folder_path: str, plugin_class: type=BasePlugin):
     if not os_path.exists(_plugin_file_in_folder(folder_path)):
         logger.warning("No plugin.py file, not a plugin folder")
         return None
-    
-    class ImportedPlugin(ImportablePlugin):
+
+    # the order of inherited classes matter 
+    class ImportedPlugin(plugin_class, ImportablePlugin):
         path = folder_path
+        def __init__(self):
+            super().__init__()
     
     return ImportedPlugin

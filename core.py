@@ -48,65 +48,6 @@ class Event:
             return f"{self.name} amount = {self._amount} ({percent}%)"
         return f"{self.name}"
 
-class EventDefinition:
-    def __init__(self, values: dict) -> None:
-        self.name = values["name"]
-        self.description = values.get("description", "")
-        self.is_additive = values.get("additive")
-        self.proportionality_value = values.get("proportional_to")
-        self.duration = values.get("duration")
-        self._test_event_requested = False
-
-    def assign_config_object(self, config):
-        self._config = config
-        
-    def create_event(self, amount:float = 1) -> Event:
-        return Event(self, amount=amount)
-        
-    def set(self, var_path, value):
-        self._config.set(f"events.{self.name}.{var_path}", value)
-
-    def get(self, var_path, default=None):
-        return self._config.get(f"events.{self.name}.{var_path}", default)
-        
-    @property
-    def is_proportional(self):
-        return self.proportionality_value is not None
-
-    @property
-    def point_specifiers_text(self):
-        points_specifiers = []
-
-        if self.is_additive:
-            points_specifiers.append("Additive")
-        else:
-            points_specifiers.append("Instant")
-
-        if self.proportionality_value is not None:
-            points_specifiers.append(f"Proportional to {self.proportionality_value}")
-
-        if self.duration is not None:
-            if self.duration == 1:
-                points_specifiers.append("Per Second")
-            else:
-                points_specifiers.append(f"Per {self.duration}s")
-
-        if points_specifiers == []:
-            return ""
-
-        text = " | ".join(points_specifiers)
-        return f"[{text}]"
-
-    def set_test_event_requested(self, value: bool):
-        self._test_event_requested = value
-
-    def try_get_test_event(self):
-        if self._test_event_requested:
-            if self.is_additive and self.duration is None:
-                self._test_event_requested = False
-            return Event(self)
-        return None
-
 class PPVariable:
     import time as _time
 
