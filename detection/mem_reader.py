@@ -10,10 +10,10 @@ class ProcessMemoryReader:
         self.process_name = process_name
         self.variables = variables
         self.process_memory = None
-        self.logger = logging.getLogger("app.process_memory_reader")
+        self.logger = logging.getLogger("pp.process_memory_reader")
         self.logger.setLevel(logging.DEBUG)
 
-    def check_process_memory(self):
+    def _check_process_memory(self):
         if self.process_memory is None:
             try:
                 self.process_memory = Pymem(self.process_name)
@@ -25,7 +25,7 @@ class ProcessMemoryReader:
     def read_variable(self, name, debug=False):
         if debug:
             self.logger.debug(f"Try reading variable: {name}")
-        if not self.check_process_memory():
+        if not self._check_process_memory():
             if debug:
                 self.logger.debug("process not found")
             return None

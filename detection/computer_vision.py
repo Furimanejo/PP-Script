@@ -224,14 +224,10 @@ class ComputerVision():
 
                 match = {
                     "region": region_key,
-                    "template": template_key,
+                    "template_name": template_key,
                     "confidence": match_max_value,
                     "h_pos_percentage": match_loc[0] / crop_w,
                     "v_pos_percentage": match_loc[1] / crop_h,
-                    "x": match_loc[0],
-                    "y": match_loc[1],
-                    "w": template_w,
-                    "h": template_h,
                 }
                 matches.append(match)
                 

@@ -1,52 +1,8 @@
 class FrameData:
     def __init__(self) -> None:
         self.delta_time: float = None
-        self.events: list[Event] = []
-        self.cv_results: list[dict] = []
+        self.events: list[dict] = []
         self.debug_info: dict = {}
-
-class Event:
-    def __init__(self,
-                 event_definition,
-                 amount : float = None
-                 ):
-        self.event_def: EventDefinition = event_definition
-        self._amount = amount
-
-    def scaled_amount(self):
-        if self.event_def.is_proportional:
-            amount = self._amount
-            amount /= self.event_def.proportionality_value
-            return amount
-        else:
-            return 1
-
-    def get_points(self, delta_time):
-        # return additive_points, instant_points
-        if self.event_def is None:
-            return 0, 0
-
-        points = self.event_def.get("points", 0)
-        points *= self.scaled_amount()
-
-        if self.event_def.duration is not None:
-            points *= delta_time / self.event_def.duration
-
-        if self.event_def.is_additive:
-            return points, 0
-        else:
-            return 0, points
-
-    @property
-    def name(self):
-        return self.event_def.name if self.event_def is not None else None
-
-    @property
-    def debug_text(self):
-        if self.event_def.is_proportional:
-            percent = int(100*self.scaled_amount())
-            return f"{self.name} amount = {self._amount} ({percent}%)"
-        return f"{self.name}"
 
 class PPVariable:
     import time as _time
