@@ -1,34 +1,9 @@
-import time
 import logging
 from os import path as os_path
 from os import listdir as os_listdir
-from .core import FrameData
+from .abstract_plugin import AbstractPlugin
 
-logger = logging.getLogger("pp.plugin")
-logger.setLevel(logging.DEBUG)
-
-class BasePlugin():
-    name = None
-
-    def __init__(self):
-        super().__init__()
-        self.events = {}
-
-    def update(self, frame_data: FrameData = None):
-        if not frame_data:
-            frame_data = FrameData()
-        self._frame_data = frame_data
-        
-        self.detect()
-    
-    def detect(self):
-        logger.warning("plugin did not define the detect method")
-
-    def append_event(self, event_dict):
-        self._frame_data.events.append(event_dict)
-        
-    def get_time(self):
-        return time.perf_counter()
+logger = logging.getLogger("pp.plugin_import")
 
 def _try_find_script_file_in_folder(path: str):
     files = [f for f in os_listdir(path) if f.endswith(".py")]
@@ -74,23 +49,18 @@ def _try_import_script_file(script_path: str):
     }
     return scope_variables
 
-def try_import_plugin_at_folder(folder_path: str, plugin_class: type=BasePlugin):
+def try_import_plugin_at_folder(folder_path: str):
     script_filename = _try_find_script_file_in_folder(folder_path)
     if not script_filename:
         return None
-    
-    plugin_scope_variables = _try_import_script_file(os_path.join(folder_path, script_filename))
-    if plugin_scope_variables is None:
-        return None
 
-    plugin_name = script_filename.rpartition(".")[0]
-
-    class ImportedPlugin(plugin_class):
-        path = folder_path
-        name = plugin_name
+    class ImportedPlugin(AbstractPlugin):
+        _path = folder_path
+        _name = script_filename.rpartition(".")[0]
 
         def __init__(self):
             super().__init__()
+            plugin_scope_variables = _try_import_script_file(os_path.join(self._path, script_filename))
             globals_to_add = {
                 "append_event": self.append_event,
                 "get_time": self.get_time

@@ -1,8 +1,6 @@
-class FrameData:
-    def __init__(self) -> None:
-        self.delta_time: float = None
-        self.events: list[dict] = []
-        self.debug_info: dict = {}
+class PPEvent:
+    def __init__(self, values: dict):
+        self.type_name = values.pop("type", None)
 
 class PPVariable:
     import time as _time

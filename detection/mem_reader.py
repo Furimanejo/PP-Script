@@ -6,9 +6,9 @@ import logging
 __all__ = ["ProcessMemoryReader"]
 
 class ProcessMemoryReader:
-    def __init__(self, process_name, variables) -> None:
-        self.process_name = process_name
-        self.variables = variables
+    def __init__(self, arguments: dict) -> None:
+        self.process_name = arguments.get("process_name")
+        self.pointers = arguments.get("pointers")
         self.process_memory = None
         self.logger = logging.getLogger("pp.process_memory_reader")
         self.logger.setLevel(logging.DEBUG)
@@ -30,7 +30,7 @@ class ProcessMemoryReader:
                 self.logger.debug("process not found")
             return None
 
-        v = self.variables[name]
+        v = self.pointers[name]
         address = None
         try:
             address = module_from_name(self.process_memory.process_handle, v["module"]).lpBaseOfDll
