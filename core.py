@@ -1,3 +1,11 @@
+import logging
+LOGGER_NAME = "pp_script"
+logger = logging.getLogger(LOGGER_NAME)
+
+def set_parent_logger(parent_logger: logging.Logger):
+    global logger
+    logger = parent_logger.getChild(LOGGER_NAME)
+
 class PPEvent:
     def __init__(self, values: dict):
         self.type_name = values.pop("type", None)

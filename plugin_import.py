@@ -1,9 +1,19 @@
-import logging
 from os import path as os_path
 from os import listdir as os_listdir
 from .abstract_plugin import AbstractPlugin
 
-logger = logging.getLogger("pp.plugin_import")
+from RestrictedPython import compile_restricted, safe_globals, limited_builtins
+from RestrictedPython.Eval import default_guarded_getiter,default_guarded_getitem
+from RestrictedPython.Guards import guarded_iter_unpack_sequence,safer_getattr, full_write_guard
+restricted_python_globals = safe_globals.copy() | limited_builtins.copy()
+restricted_python_globals['_getiter_'] = default_guarded_getiter
+restricted_python_globals['_getitem_'] = default_guarded_getitem
+restricted_python_globals['_iter_unpack_sequence_'] = guarded_iter_unpack_sequence
+restricted_python_globals['getattr'] = safer_getattr
+restricted_python_globals['_write_'] = full_write_guard
+
+from .core import logger as parent_logger
+logger = parent_logger.getChild("import")
 
 def _try_find_script_file_in_folder(path: str):
     files = [f for f in os_listdir(path) if f.endswith(".py")]
@@ -14,40 +24,6 @@ def _try_find_script_file_in_folder(path: str):
         logger.error(f"Plugin folder has more than one script: {path}")
         return None
     return files[0]
-
-def _try_import_script_file(script_path: str):
-    script_text = None
-    with open(script_path, "r", encoding="utf-8") as f:
-        script_text = f.read()
-
-    from RestrictedPython import compile_restricted, safe_globals, limited_builtins
-    from RestrictedPython.Eval import default_guarded_getiter,default_guarded_getitem
-    from RestrictedPython.Guards import guarded_iter_unpack_sequence,safer_getattr, full_write_guard
-    from .detection_imports import imports_as_dict
-    plugin_globals = safe_globals.copy() | limited_builtins.copy()
-    plugin_globals['_getiter_'] = default_guarded_getiter
-    plugin_globals['_getitem_'] = default_guarded_getitem
-    plugin_globals['_iter_unpack_sequence_'] = guarded_iter_unpack_sequence
-    plugin_globals['getattr'] = safer_getattr
-    plugin_globals['_write_'] = full_write_guard
-    plugin_globals |= imports_as_dict
-    plugin_globals["log_debug"] = logger.debug
-
-    plugin_locals = {}
-
-    try:
-        compiled_plugin = compile_restricted(script_text, script_path, "exec")
-        exec(compiled_plugin, plugin_globals, plugin_locals)
-    except Exception as e:
-        logger.error(f"Failed to import script at {script_path}")
-        logger.error(e)
-        return None
-    
-    scope_variables = {
-        "globals": plugin_globals,
-        "locals": plugin_locals,
-    }
-    return scope_variables
 
 def try_import_plugin_at_folder(folder_path: str):
     script_filename = _try_find_script_file_in_folder(folder_path)
@@ -60,12 +36,25 @@ def try_import_plugin_at_folder(folder_path: str):
 
         def __init__(self):
             super().__init__()
-            plugin_scope_variables = _try_import_script_file(os_path.join(self._path, script_filename))
-            globals_to_add = {
-                "append_event": self.append_event,
-                "get_time": self.get_time
-            }
-            plugin_scope_variables["globals"].update(globals_to_add)
-            self.__dict__.update(plugin_scope_variables["locals"])
-    
+            self._custom_update = None
+
+            _globals = restricted_python_globals.copy()
+            attrs = self._get_importable_attributes()
+            _globals.update(attrs)
+
+            _locals = {}
+            script_path = os_path.join(self._path, script_filename)
+            with open(script_path, "r", encoding="utf-8") as f:
+                script_text = f.read()
+                compiled_plugin = compile_restricted(script_text, script_path, "exec")
+                exec(compiled_plugin, _globals, _locals)
+                
+                self._custom_update = _locals.get("update", None)
+                #self.__dict__.update(_locals)
+
+        def update(self):
+            super().update()
+            if self._custom_update:
+                self._custom_update()
+
     return ImportedPlugin
