@@ -6,13 +6,18 @@ def set_parent_logger(parent_logger: logging.Logger):
     global logger
     logger = parent_logger.getChild(LOGGER_NAME)
 
+from time import perf_counter
+get_time = perf_counter
+
+def set_time_getter(getter: callable):
+    global get_time
+    get_time = getter
+
 class PPEvent:
     def __init__(self, values: dict):
         self.type_name = values.pop("type", None)
 
 class PPVariable:
-    import time as _time
-
     def __init__(self, buffer_length: float = 0, tolerance: float = float('inf')) -> None:
         self._buffer_length = buffer_length
         self._tolerance = tolerance
@@ -28,7 +33,8 @@ class PPVariable:
             self._buffer = {}
             return
 
-        t = self._time.perf_counter()
+        t = get_time()
+        print(t)
         self._buffer[t] = value
 
         keys = list(self._buffer.keys())
