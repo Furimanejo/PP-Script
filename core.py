@@ -1,17 +1,6 @@
 import logging
-LOGGER_NAME = "pp_script"
-logger = logging.getLogger(LOGGER_NAME)
-
-def set_parent_logger(parent_logger: logging.Logger):
-    global logger
-    logger = parent_logger.getChild(LOGGER_NAME)
-
-from time import perf_counter
-get_time = perf_counter
-
-def set_time_getter(getter: callable):
-    global get_time
-    get_time = getter
+from time import perf_counter as get_time
+logger = logging.getLogger().getChild("pp_script")
 
 class PPEvent:
     def __init__(self, values: dict):
@@ -34,7 +23,6 @@ class PPVariable:
             return
 
         t = get_time()
-        print(t)
         self._buffer[t] = value
 
         keys = list(self._buffer.keys())
