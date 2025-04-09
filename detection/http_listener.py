@@ -1,7 +1,6 @@
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import threading
 import weakref
-from .. import app
 
 class HTTPListener:
     def __init__(self, on_got_content_callback) -> None:

@@ -2,12 +2,14 @@ from .core import logger
 from .core import PPEvent, PPVariable, get_time
 from .detection.mem_reader import ProcessMemoryReader
 from pywinctl import getWindowsWithTitle, getAllScreens, Re
+from weakref import WeakMethod
 
 class AbstractPlugin():
     _name = "undefined plugin name"
 
     def __init__(self):
         super().__init__()
+        self.b = None
         if not hasattr(self, "_logger"):
             self._logger = logger.getChild(self._name)
         self._rect = None
@@ -24,9 +26,9 @@ class AbstractPlugin():
         }
 
     def set_plugin_data(self, data: dict):
+        self._event_types = data.pop("events", {})
         self._target_window = data.pop("target_window", None)
         self._target_monitor = data.pop("target_monitor", None)
-        self._event_types = data.pop("events", {})
 
     def define_events(self, input_event_types: dict):
         self._event_types = input_event_types.copy()
@@ -49,6 +51,9 @@ class AbstractPlugin():
 
     def append_event(self, values):
         self._raised_events.append(PPEvent(values))
+
+    def terminate(self):
+        pass
 
 def get_window_rect_and_focus_by_regex(regex: str):
     rect = None

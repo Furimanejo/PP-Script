@@ -1,6 +1,5 @@
 from os import path as os_path
 from os import listdir as os_listdir
-from .abstract_plugin import AbstractPlugin
 
 from RestrictedPython import compile_restricted, safe_globals, limited_builtins
 from RestrictedPython.Eval import default_guarded_getiter,default_guarded_getitem
@@ -14,6 +13,7 @@ restricted_python_globals['_write_'] = full_write_guard
 
 from .core import logger as parent_logger
 logger = parent_logger.getChild("import")
+from .abstract_plugin import AbstractPlugin
 
 def _try_find_script_file_in_folder(path: str):
     files = [f for f in os_listdir(path) if f.endswith(".py")]
@@ -48,13 +48,17 @@ def try_import_plugin_at_folder(folder_path: str):
                 script_text = f.read()
                 compiled_plugin = compile_restricted(script_text, script_path, "exec")
                 exec(compiled_plugin, _globals, _locals)
-                
-                self._custom_update = _locals.get("update", None)
-                #self.__dict__.update(_locals)
+
+            self._custom_update = _locals.get("update", None)
+            #self.__dict__.update(_locals)
 
         def update(self):
             super().update()
             if self._custom_update:
                 self._custom_update()
+
+        def terminate(self):
+            super().terminate()
+            del self._custom_update
 
     return ImportedPlugin
