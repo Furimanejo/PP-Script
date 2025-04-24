@@ -2,18 +2,25 @@ from os import path as os_path
 from os import listdir as os_listdir
 
 from RestrictedPython import compile_restricted, safe_globals, limited_builtins
-from RestrictedPython.Eval import default_guarded_getiter,default_guarded_getitem
-from RestrictedPython.Guards import guarded_iter_unpack_sequence,safer_getattr, full_write_guard
+from RestrictedPython.Eval import default_guarded_getiter, default_guarded_getitem
+from RestrictedPython.Guards import (
+    guarded_iter_unpack_sequence,
+    safer_getattr,
+    full_write_guard,
+)
+
 restricted_python_globals = safe_globals.copy() | limited_builtins.copy()
-restricted_python_globals['_getiter_'] = default_guarded_getiter
-restricted_python_globals['_getitem_'] = default_guarded_getitem
-restricted_python_globals['_iter_unpack_sequence_'] = guarded_iter_unpack_sequence
-restricted_python_globals['getattr'] = safer_getattr
-restricted_python_globals['_write_'] = full_write_guard
+restricted_python_globals["_getiter_"] = default_guarded_getiter
+restricted_python_globals["_getitem_"] = default_guarded_getitem
+restricted_python_globals["_iter_unpack_sequence_"] = guarded_iter_unpack_sequence
+restricted_python_globals["getattr"] = safer_getattr
+restricted_python_globals["_write_"] = full_write_guard
 
 from .core import logger as parent_logger
+
 logger = parent_logger.getChild("import")
 from .abstract_plugin import AbstractPlugin
+
 
 def _try_find_script_file_in_folder(path: str):
     files = [f for f in os_listdir(path) if f.endswith(".py")]
@@ -24,6 +31,7 @@ def _try_find_script_file_in_folder(path: str):
         logger.error(f"Plugin folder has more than one script: {path}")
         return None
     return files[0]
+
 
 def try_import_plugin_at_folder(folder_path: str):
     script_filename = _try_find_script_file_in_folder(folder_path)
@@ -50,7 +58,7 @@ def try_import_plugin_at_folder(folder_path: str):
                 exec(compiled_plugin, _globals, _locals)
 
             self._custom_update = _locals.get("update", None)
-            #self.__dict__.update(_locals)
+            # self.__dict__.update(_locals)
 
         def update(self):
             super().update()

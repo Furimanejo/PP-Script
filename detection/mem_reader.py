@@ -5,6 +5,7 @@ import logging
 
 __all__ = ["ProcessMemoryReader"]
 
+
 class ProcessMemoryReader:
     def __init__(self, arguments: dict) -> None:
         self.process_name = arguments.get("process_name")
@@ -33,7 +34,9 @@ class ProcessMemoryReader:
         v = self.pointers[name]
         address = None
         try:
-            address = module_from_name(self.process_memory.process_handle, v["module"]).lpBaseOfDll
+            address = module_from_name(
+                self.process_memory.process_handle, v["module"]
+            ).lpBaseOfDll
         except Exception as e:
             self.process_memory = None
             if "'NoneType' object has no attribute 'lpBaseOfDll'" in str(e):
@@ -50,16 +53,16 @@ class ProcessMemoryReader:
         try:
             for offset in v["offsets"][:-1]:
                 # read pointers as longlong(8bits)
-                address = self.process_memory.read_longlong(address + offset) 
+                address = self.process_memory.read_longlong(address + offset)
                 if debug:
                     self.logger.debug(f"Addr: {hex(address)}")
         except Exception as e:
             pass
-            
+
         last_offset = v["offsets"][-1]
         address += last_offset
 
-        result= None
+        result = None
         t = v.get("type")
         try:
             if t == "bool":

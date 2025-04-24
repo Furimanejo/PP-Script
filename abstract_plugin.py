@@ -2,7 +2,8 @@ from .core import logger, PPEventType, PPEvent, PPVariable, get_time
 from .detection.mem_reader import ProcessMemoryReader
 from pywinctl import getWindowsWithTitle, getAllScreens, Re
 
-class AbstractPlugin():
+
+class AbstractPlugin:
     _name = "Abstract Plugin"
 
     def __init__(self):
@@ -34,14 +35,16 @@ class AbstractPlugin():
     def update(self):
         self._raised_events = []
         self._update_rect_and_focus()
-    
+
     def _update_rect_and_focus(self):
         self._rect = None
         self._is_focused = False
         if self._target_window:
-            self._rect, self._is_focused = self._get_window_rect_and_focus_by_regex(self._target_window)
+            self._rect, self._is_focused = self._get_window_rect_and_focus_by_regex(
+                self._target_window
+            )
             return
-        
+
         if self._target_monitor:
             self._rect = self._get_monitor_rect(self._target_monitor)
             self._is_focused = True
@@ -66,9 +69,11 @@ class AbstractPlugin():
     def _get_monitor_rect(self, monitor_number: int):
         screens = list(getAllScreens().values())
         if len(screens) < monitor_number - 1:
-            self._logger.warning(f"Failed to get monitor number {monitor_number}, getting monitor 1 instead")
+            self._logger.warning(
+                f"Failed to get monitor number {monitor_number}, getting monitor 1 instead"
+            )
             monitor_number = 1
-        return screens[monitor_number-1]
+        return screens[monitor_number - 1]
 
     def append_event(self, values):
         self._raised_events.append(PPEvent(values))
