@@ -1,4 +1,4 @@
-from .core import logger, PPEvent, PPVariable, get_time
+from .core import logger, PPEventType, PPEvent, PPVariable, get_time
 from .detection.mem_reader import ProcessMemoryReader
 from pywinctl import getWindowsWithTitle, getAllScreens, Re
 
@@ -6,6 +6,7 @@ class AbstractPlugin():
     _name = "Abstract Plugin"
 
     def __init__(self):
+        self._event_types: dict[str:PPEventType] = {}
         super().__init__()
         self.b = None
         self._logger = logger.getChild(self._name)
@@ -24,9 +25,11 @@ class AbstractPlugin():
 
     def _set_plugin_data(self, data: dict):
         data = data.copy()
-        self._event_types = data.pop("events", {})
         self._target_window = data.pop("target_window", None)
         self._target_monitor = data.pop("target_monitor", None)
+        events: dict = data.pop("events", {})
+        for name, values in events.items():
+            self._event_types[name] = PPEventType(values)
 
     def update(self):
         self._raised_events = []

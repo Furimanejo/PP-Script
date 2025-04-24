@@ -1,13 +1,25 @@
 import logging
 from time import perf_counter as get_time
+
 logger = logging.getLogger().getChild("pp_script")
+
+
+class PPEventType:
+    def __init__(self, values: dict):
+        self.description = values.get("description")
+        self.extras = {}
+        pass
+
 
 class PPEvent:
     def __init__(self, values: dict):
         self.type_name = values.pop("type", None)
 
+
 class PPVariable:
-    def __init__(self, buffer_length: float = 0, tolerance: float = float('inf')) -> None:
+    def __init__(
+        self, buffer_length: float = 0, tolerance: float = float("inf")
+    ) -> None:
         self._buffer_length = buffer_length
         self._tolerance = tolerance
         self._buffer = {}
@@ -37,10 +49,10 @@ class PPVariable:
         if value_in_range is not False:
             # not enough values to fit the desired buffer length
             return
-        
+
         values = list(self._buffer.values())
         if max(values) - min(values) <= self._tolerance:
-            new_value = sum(values)/len(values)
+            new_value = sum(values) / len(values)
             if self.value is not None:
                 self.delta = new_value - self.value
             self.value = new_value
