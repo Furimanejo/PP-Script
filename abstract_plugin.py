@@ -18,10 +18,11 @@ class AbstractPlugin:
     def _get_importable_attributes(self):
         return {
             "set_plugin_data": self._set_plugin_data,
-            "ProcessMemoryReader": ProcessMemoryReader,
-            "PPVariable": PPVariable,
+            "raise_event": self.raise_event,
             "get_time": get_time,
             "log_debug": self._logger.debug,
+            "ProcessMemoryReader": ProcessMemoryReader,
+            "PPVariable": PPVariable,
         }
 
     def _set_plugin_data(self, data: dict):
@@ -75,8 +76,11 @@ class AbstractPlugin:
             monitor_number = 1
         return screens[monitor_number - 1]
 
-    def append_event(self, values):
-        self._raised_events.append(PPEvent(values))
+    def raise_event(self, values: dict):
+        event = PPEvent(values)
+        type_name = values.get("type", None)
+        event.type = self._event_types.get(type_name, None)
+        self._raised_events.append(event)
 
     def terminate(self):
         pass

@@ -7,13 +7,12 @@ logger = logging.getLogger().getChild("pp_script")
 class PPEventType:
     def __init__(self, values: dict):
         self.description = values.get("description")
-        self.extras = {}
-        pass
 
 
 class PPEvent:
     def __init__(self, values: dict):
-        self.type_name = values.pop("type", None)
+        self.type: PPEventType = None
+        self.type_name = values.get("type", None)
 
 
 class PPVariable:
