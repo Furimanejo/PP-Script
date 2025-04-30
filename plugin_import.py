@@ -39,15 +39,15 @@ def try_import_plugin_at_folder(folder_path: str):
         return None
 
     class ImportedPlugin(AbstractPlugin):
-        _path = folder_path
         _name = script_filename.rpartition(".")[0]
+        _path = folder_path
 
         def __init__(self):
             super().__init__()
             self._custom_update = None
 
             _globals = restricted_python_globals.copy()
-            attrs = self._get_importable_attributes()
+            attrs = self.get_importable_attributes()
             _globals.update(attrs)
 
             _locals = {}
