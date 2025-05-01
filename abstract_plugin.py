@@ -1,8 +1,16 @@
-from .core import logger, PPEventType, PPEvent, PPVariable, get_time
-from .detection.computer_vision import ComputerVision, Rect
+from time import perf_counter
+
+from .core import (
+    _logger,
+    PPEventType,
+    PPEvent,
+    PPVariable,
+    Rect,
+    get_window_rect_and_focus,
+    get_monitor_rect,
+)
+from .detection.computer_vision import ComputerVision
 from .detection.mem_reader import ProcessMemoryReader
-from pywinctl import getWindowsWithTitle, Re
-from pymonctl import getAllMonitors
 
 
 class AbstractPlugin:
@@ -12,10 +20,10 @@ class AbstractPlugin:
     def __init__(self):
         self._event_types: dict[str:PPEventType] = {}
         super().__init__()
-        self.b = None
-        self._logger = logger.getChild(self._name)
-        self._rect = None
-        self._is_focused = False
+        self._logger = _logger.getChild(self._name)
+        self._rect: Rect = None
+        self._focused: bool = None
+        self._rect_focus_getter = lambda: None, False
         self._raised_events: list[PPEvent] = None
         self._cv: ComputerVision = None
 
@@ -23,7 +31,6 @@ class AbstractPlugin:
         return {
             "set_plugin_data": self._set_plugin_data,
             "raise_event": self._raise_event,
-            "get_time": get_time,
             "log_debug": self._logger.debug,
             "PPVariable": PPVariable,
             "capture_regions": self._capture_regions,
@@ -31,59 +38,40 @@ class AbstractPlugin:
         }
 
     def _set_plugin_data(self, data: dict):
-        self._target_window = data.get("target_window", None)
-        self._target_monitor = data.get("target_monitor", None)
+        if target_window := data.get("target_window"):
+            self._rect_focus_getter = lambda: get_window_rect_and_focus(target_window)
+
+        if target_monitor := data.get("target_monitor"):
+            self._rect_focus_getter = lambda: (get_monitor_rect(target_monitor), True)
+
         events: dict = data.get("events", {})
         for name, values in events.items():
             self._event_types[name] = PPEventType(values)
+
         if cv_values := data.get("cv"):
             self._cv = ComputerVision(cv_values, self._path)
 
-    def update(self):
+    def pre_update(self):
         self._raised_events = []
         self._update_rect_and_focus()
-        self._cv and self._cv.update(self._rect)
+        self._cv and self._cv.update()
+
+    def post_update(self):
+        pass
 
     def _update_rect_and_focus(self):
-        is_focused = False
-        rect = False
+        t = perf_counter()
+        rect, focused = self._rect_focus_getter()
 
-        if self._target_window:
-            rect, is_focused = self._get_rect_and_focus_by_regex(self._target_window)
-        elif self._target_monitor:
-            rect = self._get_monitor_rect(self._target_monitor)
-            is_focused = True
-
-        if not rect == self._rect:
+        if rect != self._rect:
+            self._logger.info(f"Setting rect to {rect}")
             self._rect = rect
-            self._logger.info(f"Plugin rect set to {self._rect}")
+            self._cv and self._cv.set_rect(rect)
 
-        if is_focused != self._is_focused:
-            self._is_focused = is_focused
-            self._logger.info(f"Plugin focus set to {self._is_focused}")
-
-    def _get_rect_and_focus_by_regex(self, regex: str):
-        rect = None
-        focused = False
-        windows = getWindowsWithTitle(regex, condition=Re.MATCH)
-        if windows:
-            w = windows[0]
-            rect = Rect(w.getClientFrame()._asdict())
-            if rect.width <= 0 or rect.height <= 0:
-                rect = None
-            focused = w.isActive
-        return rect, focused
-
-    def _get_monitor_rect(self, monitor_number: int):
-        monitor_index = monitor_number - 1
-        screens = getAllMonitors()
-        if len(screens) < monitor_index:
-            self._logger.warning(
-                f"Failed to get monitor number {monitor_number}, getting monitor 1 instead"
-            )
-            monitor_index = 0
-        monitor = screens[monitor_index]
-        return Rect(monitor.rect._asdict())
+        if focused != self._focused:
+            self._logger.info(f"Setting focused to {focused}")
+            self._focused = focused
+            self._cv and self._cv.set_enabled(focused or True)
 
     def _raise_event(self, values: dict):
         event = PPEvent(values)

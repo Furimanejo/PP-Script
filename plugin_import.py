@@ -16,7 +16,7 @@ restricted_python_globals["_iter_unpack_sequence_"] = guarded_iter_unpack_sequen
 restricted_python_globals["getattr"] = safer_getattr
 restricted_python_globals["_write_"] = full_write_guard
 
-from .core import logger as parent_logger
+from .core import _logger as parent_logger
 
 logger = parent_logger.getChild("import")
 from .abstract_plugin import AbstractPlugin
@@ -44,7 +44,7 @@ def try_import_plugin_at_folder(folder_path: str):
 
         def __init__(self):
             super().__init__()
-            self._custom_update = None
+            self._update = None
 
             _globals = restricted_python_globals.copy()
             attrs = self.get_importable_attributes()
@@ -57,16 +57,14 @@ def try_import_plugin_at_folder(folder_path: str):
                 compiled_plugin = compile_restricted(script_text, script_path, "exec")
                 exec(compiled_plugin, _globals, _locals)
 
-            self._custom_update = _locals.get("update", None)
-            # self.__dict__.update(_locals)
+            self._update = _locals.get("update", None)
 
-        def update(self):
-            super().update()
-            if self._custom_update:
-                self._custom_update()
+        def pre_update(self):
+            super().pre_update()
+            self._update and self._update()
 
         def terminate(self):
             super().terminate()
-            del self._custom_update
+            del self._update
 
     return ImportedPlugin
