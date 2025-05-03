@@ -1,3 +1,4 @@
+from typing import Callable
 from time import perf_counter
 
 from .core import (
@@ -9,7 +10,7 @@ from .core import (
     get_window_rect_and_focus,
     get_monitor_rect,
 )
-from .detection.computer_vision import ComputerVision
+from .detection.computer_vision import ComputerVision, cv_in_range
 from .detection.mem_reader import ProcessMemoryReader
 
 
@@ -28,14 +29,17 @@ class AbstractPlugin:
         self._cv: ComputerVision = None
 
     def get_importable_attributes(self):
-        return {
+        attr = {
             "set_plugin_data": self._set_plugin_data,
             "raise_event": self._raise_event,
             "log_debug": self._logger.debug,
-            "PPVariable": PPVariable,
-            "capture_regions": self._capture_regions,
-            "match_template": self._match_template,
+            "capture_regions": self.capture_regions,
+            "match_template": self.match_template,
+            "get_region_fill": self.get_region_fill_ratio,
+            "cv_in_range": cv_in_range,
         }
+
+        return attr
 
     def _set_plugin_data(self, data: dict):
         if target_window := data.get("target_window"):
@@ -46,15 +50,16 @@ class AbstractPlugin:
 
         events: dict = data.get("events", {})
         for name, values in events.items():
+            assert isinstance(name, str)
             self._event_types[name] = PPEventType(values)
 
         if cv_values := data.get("cv"):
             self._cv = ComputerVision(cv_values, self._path)
 
-    def pre_update(self):
+    def update(self):
         self._raised_events = []
         self._update_rect_and_focus()
-        self._cv and self._cv.update()
+        self._cv and self._cv.update(self._rect if self._focused else None)
 
     def post_update(self):
         pass
@@ -66,17 +71,14 @@ class AbstractPlugin:
         if rect != self._rect:
             self._logger.info(f"Setting rect to {rect}")
             self._rect = rect
-            self._cv and self._cv.set_rect(rect)
 
         if focused != self._focused:
             self._logger.info(f"Setting focused to {focused}")
             self._focused = focused
-            self._cv and self._cv.set_enabled(focused or True)
 
     def _raise_event(self, values: dict):
+        values["type"] = self._event_types.get(values.get("type"))
         event = PPEvent(values)
-        type_name = values.get("type", None)
-        event.type = self._event_types.get(type_name, None)
         self._raised_events.append(event)
 
     def terminate(self):
@@ -89,8 +91,22 @@ class AbstractPlugin:
             raise Exception("Internal CV object was not initialized.")
         return self._cv
 
-    def _capture_regions(self, *args, **kwargs):
-        return self.cv.capture_regions(*args, **kwargs)
+    def capture_regions(self, regions: list[str] = [], debug=False) -> bool:
+        return self.cv.capture_regions(regions=regions, debug=debug)
 
-    def _match_template(self, *args, **kwargs):
-        return self.cv.match_template(*args, **kwargs)
+    def match_template(
+        self,
+        template: str,
+        region: str,
+        filter: Callable = None,
+        debug: bool = False,
+    ) -> None | dict:
+        return self.cv.match_template(
+            template_name=template,
+            region_name=region,
+            filter=filter,
+            debug=debug,
+        )
+
+    def get_region_fill_ratio(self, *args, **kwargs) -> None | float:
+        return self.cv.get_region_fill_ratio(*args, **kwargs)

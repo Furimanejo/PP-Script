@@ -1,7 +1,6 @@
 import logging
 from time import perf_counter
 from pywinctl import getWindowsWithTitle, Re
-from pymonctl import getAllMonitors, enableUpdateInfo, Monitor
 import mss
 
 _logger = logging.getLogger().getChild("pp_script")
@@ -14,8 +13,14 @@ class PPEventType:
 
 class PPEvent:
     def __init__(self, values: dict):
-        self.type: PPEventType = None
-        self.type_name = values.get("type", None)
+        self.type: PPEventType = values.get("type")
+        self.id = values.get("id")
+        self._amount = values.get("amount")
+
+    @property
+    def amount(self):
+        if not self._amount:
+            return 1
 
 
 class PPVariable:

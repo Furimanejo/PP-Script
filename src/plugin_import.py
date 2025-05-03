@@ -15,6 +15,9 @@ restricted_python_globals["_getitem_"] = default_guarded_getitem
 restricted_python_globals["_iter_unpack_sequence_"] = guarded_iter_unpack_sequence
 restricted_python_globals["getattr"] = safer_getattr
 restricted_python_globals["_write_"] = full_write_guard
+restricted_python_globals["min"] = min
+restricted_python_globals["max"] = max
+restricted_python_globals["len"] = len
 
 from .core import _logger as parent_logger
 
@@ -44,7 +47,7 @@ def try_import_plugin_at_folder(folder_path: str):
 
         def __init__(self):
             super().__init__()
-            self._update = None
+            self._imported_update = None
 
             _globals = restricted_python_globals.copy()
             attrs = self.get_importable_attributes()
@@ -57,14 +60,14 @@ def try_import_plugin_at_folder(folder_path: str):
                 compiled_plugin = compile_restricted(script_text, script_path, "exec")
                 exec(compiled_plugin, _globals, _locals)
 
-            self._update = _locals.get("update", None)
+            self._imported_update = _locals.get("update", None)
 
-        def pre_update(self):
-            super().pre_update()
-            self._update and self._update()
+        def update(self):
+            super().update()
+            self._imported_update and self._imported_update()
 
         def terminate(self):
             super().terminate()
-            del self._update
+            del self._imported_update
 
     return ImportedPlugin
