@@ -57,6 +57,17 @@ def try_import_plugin_at_folder(folder_path: str):
             script_path = os_path.join(self._path, script_filename)
             with open(script_path, "r", encoding="utf-8") as f:
                 script_text = f.read()
+                # Developers might want import statements for static analysis and
+                # autocompletion, but imports can't be compiled/executed, so we
+                # remove them from the file first
+                lines = script_text.splitlines()
+                for line in lines:
+                    if "import" in line:
+                        lines = lines[1:]
+                    else:
+                        break
+                script_text = "\n".join(lines)
+
                 compiled_plugin = compile_restricted(script_text, script_path, "exec")
                 exec(compiled_plugin, _globals, _locals)
 

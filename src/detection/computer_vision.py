@@ -211,5 +211,5 @@ class Template:
         return self._scaled_and_filtered[filter]
 
 
-def cv_in_range(img, lower, upper):
+def cv_in_range(img, lower: tuple, upper: tuple):
     return cv.inRange(img, lower, upper)

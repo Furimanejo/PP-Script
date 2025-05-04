@@ -35,7 +35,7 @@ class AbstractPlugin:
             "log_debug": self._logger.debug,
             "capture_regions": self.capture_regions,
             "match_template": self.match_template,
-            "get_region_fill": self.get_region_fill_ratio,
+            "get_region_fill_ratio": self.get_region_fill_ratio,
             "cv_in_range": cv_in_range,
         }
 
@@ -95,18 +95,13 @@ class AbstractPlugin:
         return self.cv.capture_regions(regions=regions, debug=debug)
 
     def match_template(
-        self,
-        template: str,
-        region: str,
-        filter: Callable = None,
-        debug: bool = False,
+        self, template: str, region: str, filter=None, debug: bool = False
     ) -> None | dict:
         return self.cv.match_template(
-            template_name=template,
-            region_name=region,
-            filter=filter,
-            debug=debug,
+            template_name=template, region_name=region, filter=filter, debug=debug
         )
 
-    def get_region_fill_ratio(self, *args, **kwargs) -> None | float:
-        return self.cv.get_region_fill_ratio(*args, **kwargs)
+    def get_region_fill_ratio(self, region: str, filter, debug: bool = False) -> float:
+        return self.cv.get_region_fill_ratio(
+            region_name=region, filter=filter, debug=debug
+        )
