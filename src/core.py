@@ -2,6 +2,8 @@ import logging
 from time import perf_counter
 from pywinctl import getWindowsWithTitle, Re
 import mss
+import os
+import zipfile
 
 _logger = logging.getLogger().getChild("pp_script")
 
@@ -159,3 +161,16 @@ class Rect:
 
     def __repr__(self):
         return f"{self.as_dict()}"
+
+
+def read_file_at_folder_or_zip(folder_path: str, file_path: str) -> bytes:
+    if folder_path.endswith(".zip"):
+        with zipfile.ZipFile(folder_path) as zip:
+            try:
+                with zip.open(file_path) as file:
+                    return file.read()
+            except KeyError:
+                raise FileNotFoundError()
+    else:
+        with open(os.path.join(folder_path, file_path), "rb") as file:
+            return file.read()

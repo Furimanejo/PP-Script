@@ -5,14 +5,14 @@ import cv2 as cv
 import numpy as np
 from os import path as os_path, makedirs
 
-from ..core import _logger, Rect
+from ..core import _logger, Rect, read_file_at_folder_or_zip
 
 _logger = _logger.getChild("cv")
 
 
 class ComputerVision:
     def __init__(self, cv_values: dict, path: str):
-        self._debug_folder = os_path.join(path, "cv_debug")
+        self._folder = path
         self._rect: Rect = None
         self._capture: Capture = None
 
@@ -46,9 +46,8 @@ class ComputerVision:
         for name, values in templates.items():
             if not isinstance(values, dict):
                 raise ValueError()
-            values["path"] = os_path.join(path, values["file"])
             values.setdefault("scaling_method", _scaling_method)
-            self._templates[name] = Template(values)
+            self._templates[name] = Template(values, folder_path=path)
 
     def update(self, rect: Rect):
         self._capture = None
@@ -122,9 +121,12 @@ class ComputerVision:
         return np.count_nonzero(region_crop) / region_crop.size
 
     def _save_image(self, image, name):
-        makedirs(self._debug_folder, exist_ok=True)
-        file_path = os_path.join(self._debug_folder, f"{name}.png")
-        cv.imwrite(file_path, image)
+        if self._folder.endswith(".zip"):
+            return
+        path = os_path.join(self._folder, "cv_debug")
+        makedirs(path, exist_ok=True)
+        path = os_path.join(path, f"{name}.png")
+        cv.imwrite(path, image)
 
 
 class Capture:
@@ -178,16 +180,17 @@ class Region:
 
 
 class Template:
-    def __init__(self, values: dict):
+    def __init__(self, values: dict, folder_path: str):
         self.threshold = values["threshold"]
         self.scaling_method = values["scaling_method"]
-
-        path = values["path"]
-        self._original_image = cv.imread(path)
-        if self._original_image is None:
-            raise Exception(f"Failed to load template: {path}")
-
         self._scaled_and_filtered = {}
+        self._original_image = None
+        try:
+            f = read_file_at_folder_or_zip(folder_path, values["file"])
+            img_array = np.frombuffer(f, dtype=np.uint8)
+            self._original_image = cv.imdecode(img_array, cv.IMREAD_COLOR)
+        except FileNotFoundError:
+            return
 
     def scale(self, rect: Rect):
         rx, ry, rw, rh = rect.as_tuple()
