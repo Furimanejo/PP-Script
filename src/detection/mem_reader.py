@@ -1,76 +1,77 @@
+from typing import Callable, Any
 from pymem import Pymem
 from pymem.process import module_from_name
-from pymem.exception import ProcessNotFound, MemoryReadError
-import logging
-
-__all__ = ["ProcessMemoryReader"]
+from pymem.exception import ProcessNotFound
 
 
 class ProcessMemoryReader:
-    def __init__(self, arguments: dict) -> None:
-        self.process_name = arguments.get("process_name")
-        self.pointers = arguments.get("pointers")
-        self.process_memory = None
-        self.logger = logging.getLogger("pp.process_memory_reader")
-        self.logger.setLevel(logging.DEBUG)
+    def __init__(self, values: dict) -> None:
+        self._process_name = values.get("process")
 
-    def _check_process_memory(self):
-        if self.process_memory is None:
+        self._pointers: dict[str, Pointer] = {}
+        pointers: dict = values.get("pointers", {})
+        for name, pointer_values in pointers.items():
+            self._pointers[name] = Pointer(values=pointer_values)
+
+        self._memory = None
+
+    def update(self):
+        if not self._memory:
             try:
-                self.process_memory = Pymem(self.process_name)
-                self.logger.info(f"Found process: {self.process_name}")
+                self._memory = Pymem(self._process_name)
             except ProcessNotFound:
-                pass
-        return self.process_memory is not None
+                self._memory = None
 
-    def read_variable(self, name, debug=False):
-        if debug:
-            self.logger.debug(f"Try reading variable: {name}")
-        if not self._check_process_memory():
-            if debug:
-                self.logger.debug("process not found")
-            return None
+        if self._memory:
+            try:
+                self._memory.read_bytes(self._memory.base_address, 1)
+            except Exception as e:
+                if "Could not find process first module" in str(e):
+                    print(e)
+                    pass
+                else:
+                    raise e
+                self._memory = None
 
-        v = self.pointers[name]
-        address = None
+        for p in self._pointers.values():
+            p.update(self._memory)
+
+    def read_pointer(self, pointer_name, debug=False):
+        pointer: Pointer = self._pointers[pointer_name]
+        value = pointer.read()
+        return value
+
+
+class Pointer:
+    def __init__(self, values: dict):
+        self.module_name: str = values["module"]
+        self.offsets: list = values["offsets"]
+        self.type_read_method: Callable[[Pymem, Any], Any] = {
+            "bool": Pymem.read_bool,
+            "int": Pymem.read_int,
+            "float": Pymem.read_float,
+        }[values["type"]]
+
+        self._memory: Pymem = None
+
+    def update(self, memory: Pymem):
+        self._memory = memory
+
+    def read(self):
+        if not self._memory:
+            return
+
+        module_info = module_from_name(self._memory.process_handle, self.module_name)
+        if module_info is None:
+            return
+
+        address = module_info.lpBaseOfDll
+
         try:
-            address = module_from_name(
-                self.process_memory.process_handle, v["module"]
-            ).lpBaseOfDll
-        except Exception as e:
-            self.process_memory = None
-            if "'NoneType' object has no attribute 'lpBaseOfDll'" in str(e):
-                pass
-            else:
-                raise e
-        if address is None:
-            if debug:
-                self.logger.debug(f"{name} module not found")
-            return None
-
-        if debug:
-            self.logger.debug(f"Addr: {hex(address)}")
-        try:
-            for offset in v["offsets"][:-1]:
-                # read pointers as longlong(8bits)
-                address = self.process_memory.read_longlong(address + offset)
-                if debug:
-                    self.logger.debug(f"Addr: {hex(address)}")
-        except Exception as e:
-            pass
-
-        last_offset = v["offsets"][-1]
-        address += last_offset
-
-        result = None
-        t = v.get("type")
-        try:
-            if t == "bool":
-                result = self.process_memory.read_bool(address)
-            if t == "int":
-                result = self.process_memory.read_int(address)
-            if t == "float":
-                result = self.process_memory.read_float(address)
+            for offset in self.offsets[:-1]:
+                address = self._memory.read_longlong(address + offset)
+            address += self.offsets[-1]
+            return self.type_read_method(self._memory, address)
         except Exception as e:
             if "GetLastError: 998" in str(e):
                 pass
@@ -80,7 +81,3 @@ class ProcessMemoryReader:
                 pass
             else:
                 raise e
-
-        if debug:
-            self.logger.debug(f"{name} at addr {hex(address)} = {result}")
-        return result

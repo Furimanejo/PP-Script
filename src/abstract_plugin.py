@@ -5,10 +5,10 @@ from .core import (
     _logger,
     PPEventType,
     PPEvent,
-    PPVariable,
     Rect,
     get_window_rect_and_focus,
     get_monitor_rect,
+    PPVariable,
 )
 from .detection.computer_vision import ComputerVision, cv_in_range
 from .detection.mem_reader import ProcessMemoryReader
@@ -27,6 +27,7 @@ class AbstractPlugin:
         self._rect_focus_getter = lambda: None, False
         self._raised_events: list[PPEvent] = None
         self._cv: ComputerVision = None
+        self._pmr: ProcessMemoryReader = None
 
     def get_importable_attributes(self):
         attr = {
@@ -37,6 +38,7 @@ class AbstractPlugin:
             "match_template": self.match_template,
             "get_region_fill_ratio": self.get_region_fill_ratio,
             "cv_in_range": cv_in_range,
+            "read_pointer": self.read_pointer,
         }
 
         return attr
@@ -56,10 +58,14 @@ class AbstractPlugin:
         if cv_values := data.get("cv"):
             self._cv = ComputerVision(cv_values, self._path)
 
+        if pmr_values := data.get("pmr"):
+            self._pmr = ProcessMemoryReader(pmr_values)
+
     def update(self):
         self._raised_events = []
         self._update_rect_and_focus()
         self._cv and self._cv.update(self._rect if self._focused else None)
+        self._pmr and self._pmr.update()
 
     def post_update(self):
         pass
@@ -105,3 +111,13 @@ class AbstractPlugin:
         return self.cv.get_region_fill_ratio(
             region_name=region, filter=filter, debug=debug
         )
+
+    # PMR attributes
+    @property
+    def pmr(self):
+        if not self._pmr:
+            raise Exception("Internal PMR object was not initialized.")
+        return self._pmr
+
+    def read_pointer(self, pointer_name: str):
+        return self.pmr.read_pointer(pointer_name=pointer_name)
