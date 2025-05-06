@@ -1,5 +1,6 @@
 import logging
-from time import perf_counter
+from typing import Any
+from time import perf_counter as get_time
 from pywinctl import getWindowsWithTitle, Re
 import mss
 import os
@@ -10,6 +11,7 @@ _logger = logging.getLogger().getChild("pp_script")
 
 class PPEventType:
     def __init__(self, values: dict):
+        self.name = values["name"]
         self.description = values.get("description")
 
 
@@ -21,50 +23,51 @@ class PPEvent:
 
     @property
     def amount(self):
-        if not self._amount:
+        if self._amount is None:
             return 1
+        return self._amount
+
+    def __repr__(self):
+        if self.type:
+            return f"event {self.type.name} ({self.amount})"
+        return "event with no type"
 
 
 class PPVariable:
-    def __init__(
-        self, buffer_length: float = 0, tolerance: float = float("inf")
-    ) -> None:
-        self._buffer_length = buffer_length
+    def __init__(self, time_window: float = 0, tolerance: float = float("inf")) -> None:
+        self._time_window = time_window
         self._tolerance = tolerance
+        self._value = None
         self._buffer = {}
-        self.value = None
-        self.delta = None
 
-    def update(self, value):
-        self.delta = None
+    @property
+    def value(self):
+        return self._value
 
-        if value is None:
-            self.value = None
+    def update(self, new_value: float, time: float = 0) -> Any:
+        if new_value is None:
+            self._value = None
             self._buffer = {}
             return
 
-        t = get_time()
-        self._buffer[t] = value
-
-        keys = list(self._buffer.keys())
-        value_in_range = True
-        for key in keys[::-1]:
-            if value_in_range is False:
-                del self._buffer[key]
-                continue
-            if t - key >= self._buffer_length:
-                value_in_range = False
-
-        if value_in_range is not False:
-            # not enough values to fit the desired buffer length
+        self._buffer[time] = new_value
+        keys = list(self._buffer)
+        biggest_key = max(keys)
+        assert biggest_key == time
+        if biggest_key - min(keys) < self._time_window:  # not enough values to analyse
             return
 
-        values = list(self._buffer.values())
-        if max(values) - min(values) <= self._tolerance:
-            new_value = sum(values) / len(values)
-            if self.value is not None:
-                self.delta = new_value - self.value
-            self.value = new_value
+        min_key_allowed = biggest_key - self._time_window
+        for k in keys:
+            if k < min_key_allowed:
+                del self._buffer[k]
+            else:
+                if abs(new_value - self._buffer[k]) > self._tolerance:
+                    return
+
+        delta = new_value - self._value if self._value is not None else None
+        self._value = new_value
+        return delta
 
 
 def get_monitor_rect(monitor_number: int):

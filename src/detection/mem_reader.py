@@ -26,12 +26,11 @@ class ProcessMemoryReader:
             try:
                 self._memory.read_bytes(self._memory.base_address, 1)
             except Exception as e:
+                self._memory = None
                 if "Could not find process first module" in str(e):
-                    print(e)
                     pass
                 else:
                     raise e
-                self._memory = None
 
         for p in self._pointers.values():
             p.update(self._memory)

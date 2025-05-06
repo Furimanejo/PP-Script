@@ -8,6 +8,7 @@ from .core import (
     Rect,
     get_window_rect_and_focus,
     get_monitor_rect,
+    get_time,
     PPVariable,
 )
 from .detection.computer_vision import ComputerVision, cv_in_range
@@ -34,6 +35,8 @@ class AbstractPlugin:
             "set_plugin_data": self._set_plugin_data,
             "raise_event": self._raise_event,
             "log_debug": self._logger.debug,
+            "get_time": get_time,
+            "PPVar": PPVariable,
             "capture_regions": self.capture_regions,
             "match_template": self.match_template,
             "get_region_fill_ratio": self.get_region_fill_ratio,
@@ -53,6 +56,8 @@ class AbstractPlugin:
         events: dict = data.get("events", {})
         for name, values in events.items():
             assert isinstance(name, str)
+            values: dict
+            values.setdefault("name", name)
             self._event_types[name] = PPEventType(values)
 
         if cv_values := data.get("cv"):
@@ -75,11 +80,11 @@ class AbstractPlugin:
         rect, focused = self._rect_focus_getter()
 
         if rect != self._rect:
-            self._logger.info(f"Setting rect to {rect}")
+            self._logger.debug(f"Setting rect to {rect}")
             self._rect = rect
 
         if focused != self._focused:
-            self._logger.info(f"Setting focused to {focused}")
+            self._logger.debug(f"Setting focused to {focused}")
             self._focused = focused
 
     def _raise_event(self, values: dict):
