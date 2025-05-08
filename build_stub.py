@@ -6,8 +6,7 @@ text = ""
 for name, attribute in importables.items():
     if inspect.isroutine(attribute):
         sig = inspect.signature(attribute)
-        text += f"def {name}{sig}:\n"
-        text += f"    ...\n"
+        text += f"def {name}{sig}: ...\n"
     if inspect.isclass(attribute):
         text += f"class {name}:\n"
         class_attrs = inspect.getmembers(attribute)
@@ -16,8 +15,7 @@ for name, attribute in importables.items():
                 continue
             if inspect.isroutine(class_attr):
                 sig = inspect.signature(class_attr)
-                text += f"    def {class_attr_name}{sig}:\n"
-                text += f"        ...\n"
+                text += f"    def {class_attr_name}{sig}: ...\n"
 
 import os
 

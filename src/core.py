@@ -1,36 +1,40 @@
 import logging
-from typing import Any
-from time import perf_counter as get_time
-from pywinctl import getWindowsWithTitle, Re
 import mss
 import os
 import zipfile
+from typing import Any
+from pywinctl import getWindowsWithTitle, Re
+from time import perf_counter as get_time
 
 _logger = logging.getLogger().getChild("pp_script")
 
 
 class PPEventType:
     def __init__(self, values: dict):
-        self.name = values["name"]
-        self.description = values.get("description")
+        self._name = values["name"]
+        self._description = values.get("description")
+        self.normalize = values.get("scale_amount", lambda x: x)
 
 
 class PPEvent:
     def __init__(self, values: dict):
-        self.type: PPEventType = values.get("type")
-        self.id = values.get("id")
-        self._amount = values.get("amount")
+        self._id = values.pop("id", None)
+        self._type: PPEventType = values.pop("type", None)
+        self._raw_amount = values.pop("amount", None)
+        if self._type and self._raw_amount is not None:
+            self._scaled_amount = self._type.normalize(self._raw_amount)
+        else:
+            self._scaled_amount = 1
 
-    @property
-    def amount(self):
-        if self._amount is None:
-            return 1
-        return self._amount
+        self.other_data = values
 
     def __repr__(self):
-        if self.type:
-            return f"event {self.type.name} ({self.amount})"
-        return "event with no type"
+        name = self._type._name if self._type else None
+        text = f"event: {name}"
+        if self._raw_amount is not None:
+            percent = int(100 * self._scaled_amount)
+            text += f" | amount: {self._raw_amount:.2f} ({percent}%)"
+        return text
 
 
 class PPVariable:
@@ -70,32 +74,17 @@ class PPVariable:
         return delta
 
 
-def get_monitor_rect(monitor_number: int):
-    with mss.mss() as sct:
-        monitors = sct.monitors
-        if monitor_number >= len(monitors):
-            _logger.warning(
-                f"Failed to get monitor {monitor_number}, returning monitor 1 instead"
-            )
-            monitor_number = 1
-        return Rect(monitors[monitor_number])
-
-
-def get_window_rect_and_focus(regex: str):
-    rect = None
-    focused = False
-
-    window = None  # Maybe cache the windows
-    if not window:
-        results = getWindowsWithTitle(regex, condition=Re.MATCH)
-        if results:
-            window = results[0]
-
-    if window:
-        rect = Rect(window.getClientFrame()._asdict())
-        focused = window.isActive
-
-    return rect, focused
+def read_file_at_folder_or_zip(folder_path: str, file_path: str) -> bytes:
+    if folder_path.endswith(".zip"):
+        with zipfile.ZipFile(folder_path) as zip:
+            try:
+                with zip.open(file_path) as file:
+                    return file.read()
+            except KeyError:
+                raise FileNotFoundError()
+    else:
+        with open(os.path.join(folder_path, file_path), "rb") as file:
+            return file.read()
 
 
 class Rect:
@@ -166,14 +155,29 @@ class Rect:
         return f"{self.as_dict()}"
 
 
-def read_file_at_folder_or_zip(folder_path: str, file_path: str) -> bytes:
-    if folder_path.endswith(".zip"):
-        with zipfile.ZipFile(folder_path) as zip:
-            try:
-                with zip.open(file_path) as file:
-                    return file.read()
-            except KeyError:
-                raise FileNotFoundError()
-    else:
-        with open(os.path.join(folder_path, file_path), "rb") as file:
-            return file.read()
+def get_monitor_rect(monitor_number: int):
+    with mss.mss() as sct:
+        monitors = sct.monitors
+        if monitor_number >= len(monitors):
+            _logger.warning(
+                f"Failed to get monitor {monitor_number}, returning monitor 1 instead"
+            )
+            monitor_number = 1
+        return Rect(monitors[monitor_number])
+
+
+def get_window_rect_and_focus(regex: str):
+    rect = None
+    focused = False
+
+    window = None  # Maybe cache the windows
+    if not window:
+        results = getWindowsWithTitle(regex, condition=Re.MATCH)
+        if results:
+            window = results[0]
+
+    if window:
+        rect = Rect(window.getClientFrame()._asdict())
+        focused = window.isActive
+
+    return rect, focused

@@ -69,6 +69,5 @@ def import_plugin_at_folder(folder_path: str) -> typing.Type[AbstractPlugin] | N
 
         def terminate(self):
             super().terminate()
-            del self._imported_update
 
     return ImportedPlugin

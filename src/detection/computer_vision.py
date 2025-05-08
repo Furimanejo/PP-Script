@@ -13,8 +13,9 @@ _logger = _logger.getChild("cv")
 class ComputerVision:
     def __init__(self, cv_values: dict, path: str):
         self._folder = path
-        self._rect: Rect = None
         self._capture: Capture = None
+        self._rect: Rect = None
+        self._enabled = False
 
         cv_values = copy.deepcopy(cv_values)
         _scaling_method = cv_values.get("scaling_method", (1920, 1080))
@@ -49,17 +50,21 @@ class ComputerVision:
             values.setdefault("scaling_method", _scaling_method)
             self._templates[name] = Template(values, folder_path=path)
 
-    def update(self, rect: Rect):
-        self._capture = None
-        self._rect = rect
+    def update(self, rect: Rect, enable: bool):
+        if rect and (rect.height <= 0 or rect.height <= 0):
+            rect = None
         if rect:
-            for region in self._regions.values():
-                region.scale(rect)
-            for template in self._templates.values():
-                template.scale(rect)
+            if rect != self._rect:
+                for region in self._regions.values():
+                    region.scale(rect)
+                for template in self._templates.values():
+                    template.scale(rect)
+        self._rect = rect
+        self._enabled = enable
+        self._capture = None
 
     def capture_regions(self, regions: list[str] = [], debug=False):
-        if not self._rect:
+        if not self._enabled or not self._rect:
             return False
         regions = regions if regions else [name for name in self._regions]
         regions: list[Region] = [self._regions[r] for r in regions]
@@ -103,14 +108,16 @@ class ComputerVision:
         match_results = cv.matchTemplate(region_img, template_img, cv.TM_SQDIFF)
         min_val, max_val, min_loc, max_loc = cv.minMaxLoc(match_results)
         confidence = 1 - min_val / (template_img.size * 255 * 255)
-        if confidence >= template_obj.threshold:
-            result = {
-                "confidence": confidence,
-                "h_pos_percentage": min_loc[0] / region_img.shape[1],
-                "v_pos_percentage": min_loc[1] / region_img.shape[0],
-            }
-            debug and _logger.debug(result)
-            return result
+        result = {
+            "success": confidence >= template_obj.threshold,
+            "region": region_name,
+            "template": template_name,
+            "confidence": confidence,
+            "h_pos_percentage": min_loc[0] / region_img.shape[1],
+            "v_pos_percentage": min_loc[1] / region_img.shape[0],
+        }
+        debug and _logger.debug(result)
+        return result
 
     def get_region_fill_ratio(self, region_name, filter, debug=False):
         self._assert_capture()
@@ -165,6 +172,7 @@ class Capture:
 class Region:
     def __init__(self, values: dict):
         self._original_rect = Rect(values["rect"])
+        self._label_position = values.get("label_position")
         self._scaling_method = values["scaling_method"]
         self._scaled_rect = None
 

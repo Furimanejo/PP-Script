@@ -26,13 +26,13 @@ class AbstractPlugin:
         self._rect: Rect = None
         self._focused: bool = None
         self._rect_focus_getter = lambda: None, False
-        self._raised_events: list[PPEvent] = None
+        self._raised_events: list[PPEvent] = []
         self._cv: ComputerVision = None
         self._pmr: ProcessMemoryReader = None
 
     def get_importable_attributes(self):
         attr = {
-            "set_plugin_data": self._set_plugin_data,
+            "init": self._set_plugin_data,
             "raise_event": self._raise_event,
             "log_debug": self._logger.debug,
             "get_time": get_time,
@@ -69,7 +69,7 @@ class AbstractPlugin:
     def update(self):
         self._raised_events = []
         self._update_rect_and_focus()
-        self._cv and self._cv.update(self._rect if self._focused else None)
+        self._cv and self._cv.update(self._rect, self._focused)
         self._pmr and self._pmr.update()
 
     def post_update(self):
