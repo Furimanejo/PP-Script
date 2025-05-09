@@ -15,6 +15,9 @@ class PPEventType:
         self._description = values.get("description")
         self.normalize = values.get("scale_amount", lambda x: x)
 
+    def __repr__(self):
+        return self._name
+
 
 class PPEvent:
     def __init__(self, event_type: PPEventType | None, values: dict):
@@ -36,10 +39,19 @@ class PPEvent:
 
     def __repr__(self):
         name = self._type._name if self._type else None
-        text = f"event: {name}"
+        amount_text = ""
         if self._raw_amount is not None:
+            if self._raw_amount % 1 == 0:
+                amount_text += f"{int(self._raw_amount)}"
+            else:
+                amount_text += f"{self._raw_amount:.2f}"
+
             percent = int(100 * self._scaled_amount)
-            text += f" | amount: {self._raw_amount:.2f} ({percent}%)"
+            amount_text += f" | {percent}%"
+
+        text = f"{name}"
+        if amount_text:
+            text += f" ({amount_text})"
         return text
 
 
