@@ -1,5 +1,5 @@
-from typing import Callable
-from time import perf_counter
+import typing
+from uuid import uuid4
 
 from .core import (
     _logger,
@@ -26,9 +26,9 @@ class AbstractPlugin:
         self._rect: Rect = None
         self._focused: bool = None
         self._rect_focus_getter = lambda: None, False
-        self._raised_events: list[PPEvent] = []
         self._cv: ComputerVision = None
         self._pmr: ProcessMemoryReader = None
+        self._raised_events: dict[typing.Any, PPEvent] = {}
 
     def get_importable_attributes(self):
         attr = {
@@ -67,7 +67,7 @@ class AbstractPlugin:
             self._pmr = ProcessMemoryReader(pmr_values)
 
     def update(self):
-        self._raised_events = []
+        self._raised_events = {}
         self._update_rect_and_focus()
         self._cv and self._cv.update(self._rect, self._focused)
         self._pmr and self._pmr.update()
@@ -76,7 +76,6 @@ class AbstractPlugin:
         pass
 
     def _update_rect_and_focus(self):
-        t = perf_counter()
         rect, focused = self._rect_focus_getter()
 
         if rect != self._rect:
@@ -88,9 +87,13 @@ class AbstractPlugin:
             self._focused = focused
 
     def _raise_event(self, values: dict):
-        values["type"] = self._event_types.get(values.get("type"))
-        event = PPEvent(values)
-        self._raised_events.append(event)
+        event_id = values.pop("id", uuid4())
+        if event_id in self._raised_events:
+            raise Exception(f"2 events were raised with the same ID ({event_id})")
+        type_name = values.pop("type", None)
+        event_type = None if type_name is None else self._event_types[type_name]
+        event = PPEvent(event_type, values)
+        self._raised_events[event_id] = event
 
     def terminate(self):
         pass

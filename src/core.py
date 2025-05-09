@@ -17,16 +17,22 @@ class PPEventType:
 
 
 class PPEvent:
-    def __init__(self, values: dict):
-        self._id = values.pop("id", None)
-        self._type: PPEventType = values.pop("type", None)
+    def __init__(self, event_type: PPEventType | None, values: dict):
+        self._type: PPEventType | None = event_type
         self._raw_amount = values.pop("amount", None)
         if self._type and self._raw_amount is not None:
             self._scaled_amount = self._type.normalize(self._raw_amount)
         else:
             self._scaled_amount = 1
-
         self.other_data = values
+
+    @property
+    def type(self):
+        return self._type
+
+    @property
+    def scaled_amount(self):
+        return self._scaled_amount
 
     def __repr__(self):
         name = self._type._name if self._type else None
