@@ -60,8 +60,11 @@ def import_plugin_at_folder(folder_path: str) -> typing.Type[AbstractPlugin] | N
             _globals.update(importable_attrs)
             _locals = {}
             exec(compiled, _globals, _locals)
+            _globals.update(_locals)
 
             self._imported_update = _locals.get("update", None)
+            if self._imported_update is None:
+                self._logger.warning("Update fuction not found")
 
         def update(self):
             super().update()
