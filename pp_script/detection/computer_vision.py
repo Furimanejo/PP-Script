@@ -16,6 +16,7 @@ class ComputerVision:
         self._capture: Capture = None
         self._rect: Rect = None
         self._enabled = False
+        # self._do_cache_filters =
 
         cv_values = copy.deepcopy(cv_values)
         _scaling_method = cv_values.get("scaling_method", (1920, 1080))

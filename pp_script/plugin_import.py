@@ -22,10 +22,10 @@ restricted_python_globals["len"] = len
 from .core import _logger as parent_logger, read_file_at_folder_or_zip
 
 logger = parent_logger.getChild("import")
-from .abstract_plugin import AbstractPlugin
+from .plugin import Plugin
 
 
-def import_plugin_at_folder(folder_path: str) -> typing.Type[AbstractPlugin] | None:
+def import_plugin_at_folder(folder_path: str) -> typing.Type[Plugin] | None:
     try:
         file = read_file_at_folder_or_zip(folder_path, "metadata.yaml")
     except FileNotFoundError:
@@ -34,7 +34,7 @@ def import_plugin_at_folder(folder_path: str) -> typing.Type[AbstractPlugin] | N
 
     data = yaml.safe_load(file)
 
-    class ImportedPlugin(AbstractPlugin):
+    class ImportedPlugin(Plugin):
         _name = data["name"]
         _path = folder_path
 

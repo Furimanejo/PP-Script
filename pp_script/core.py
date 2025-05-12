@@ -9,7 +9,7 @@ from time import perf_counter as get_time
 _logger = logging.getLogger().getChild("pp_script")
 
 
-class PPEventType:
+class EventType:
     def __init__(self, values: dict):
         self._name = values["name"]
         self._description = values.get("description")
@@ -19,9 +19,9 @@ class PPEventType:
         return self._name
 
 
-class PPEvent:
-    def __init__(self, event_type: PPEventType | None, values: dict):
-        self._type: PPEventType | None = event_type
+class Event:
+    def __init__(self, event_type: EventType | None, values: dict):
+        self._type: EventType | None = event_type
         self._raw_amount = values.pop("amount", None)
         if self._type and self._raw_amount is not None:
             self._scaled_amount = self._type.normalize(self._raw_amount)
@@ -55,7 +55,7 @@ class PPEvent:
         return text
 
 
-class PPVariable:
+class PPVar:
     def __init__(self, time_window: float = 0, tolerance: float = float("inf")) -> None:
         self._time_window = time_window
         self._tolerance = tolerance

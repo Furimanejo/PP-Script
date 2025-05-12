@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pp_script"
+version = "1.0"
+description = "PP Script is a library for event detection plugins using methods like computer vision, process memory reading and HTTP"
+authors = [{ name = "Furimanejo", email = "furimanejo@gmail.com" }]
+readme = "README.md"
+requires-python = "==3.13.2"
+dependencies = [
+    "PyYAML==6.0.2",
+    "RestrictedPython==8.0",
+    "PyWinCtl==0.4.1",
+    "mss==10.0.0",
+    "opencv-python==4.11.0.86",
+    "Pymem==1.14.0",
+]
+
+[tool.setuptools]
+packages = ["pp_script"]

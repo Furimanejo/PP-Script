@@ -1,26 +1,26 @@
 import typing
 from uuid import uuid4
 
-from .core import (
+from pp_script.core import (
     _logger,
-    PPEventType,
-    PPEvent,
+    EventType,
+    Event,
     Rect,
     get_window_rect_and_focus,
     get_monitor_rect,
     get_time,
-    PPVariable,
+    PPVar,
 )
-from .detection.computer_vision import ComputerVision, cv_in_range
-from .detection.mem_reader import ProcessMemoryReader
+from pp_script.detection.computer_vision import ComputerVision, cv_in_range
+from pp_script.detection.mem_reader import ProcessMemoryReader
 
 
-class AbstractPlugin:
+class Plugin:
     _name = "Abstract Plugin"
     _path = ""
 
     def __init__(self):
-        self._event_types: dict[str:PPEventType] = {}
+        self._event_types: dict[str:EventType] = {}
         super().__init__()
         self._logger = _logger.getChild(self._name)
         self._rect: Rect = None
@@ -28,7 +28,7 @@ class AbstractPlugin:
         self._rect_focus_getter = lambda: None, False
         self._cv: ComputerVision = None
         self._pmr: ProcessMemoryReader = None
-        self._raised_events: dict[typing.Any, PPEvent] = {}
+        self._raised_events: dict[typing.Any, Event] = {}
 
     def get_importable_attributes(self):
         attr = {
@@ -36,7 +36,7 @@ class AbstractPlugin:
             "raise_event": self._raise_event,
             "log_debug": self._logger.debug,
             "get_time": get_time,
-            "PPVar": PPVariable,
+            "PPVar": PPVar,
             "capture_regions": self.capture_regions,
             "match_template": self.match_template,
             "get_region_fill_ratio": self.get_region_fill_ratio,
@@ -58,7 +58,7 @@ class AbstractPlugin:
             assert isinstance(name, str)
             values: dict
             values.setdefault("name", name)
-            self._event_types[name] = PPEventType(values)
+            self._event_types[name] = EventType(values)
 
         if cv_values := data.get("cv"):
             self._cv = ComputerVision(cv_values, self._path)
@@ -92,7 +92,7 @@ class AbstractPlugin:
             raise Exception(f"2 events were raised with the same ID ({event_id})")
         type_name = values.pop("type", None)
         event_type = None if type_name is None else self._event_types[type_name]
-        event = PPEvent(event_type, values)
+        event = Event(event_type, values)
         self._raised_events[event_id] = event
 
     def terminate(self):
