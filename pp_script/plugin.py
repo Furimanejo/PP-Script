@@ -28,7 +28,7 @@ class Plugin:
         self._rect_focus_getter = lambda: None, False
         self._cv: ComputerVision = None
         self._pmr: ProcessMemoryReader = None
-        self._raised_events: dict[typing.Any, Event] = {}
+        self.events: dict[typing.Any, Event] = {}
 
     def get_importable_attributes(self):
         attr = {
@@ -67,7 +67,7 @@ class Plugin:
             self._pmr = ProcessMemoryReader(pmr_values)
 
     def update(self):
-        self._raised_events = {}
+        self.events = {}
         self._update_rect_and_focus()
         self._cv and self._cv.update(self._rect, self._focused)
         self._pmr and self._pmr.update()
@@ -88,12 +88,12 @@ class Plugin:
 
     def _raise_event(self, values: dict):
         event_id = values.pop("id", uuid4())
-        if event_id in self._raised_events:
+        if event_id in self.events:
             raise Exception(f"2 events were raised with the same ID ({event_id})")
         type_name = values.pop("type", None)
         event_type = None if type_name is None else self._event_types[type_name]
         event = Event(event_type, values)
-        self._raised_events[event_id] = event
+        self.events[event_id] = event
 
     def terminate(self):
         pass
