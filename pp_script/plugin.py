@@ -127,5 +127,5 @@ class Plugin:
             raise Exception("Internal PMR object was not initialized.")
         return self._pmr
 
-    def read_pointer(self, pointer_name: str):
-        return self.pmr.read_pointer(pointer_name=pointer_name)
+    def read_pointer(self, pointer_name: str, debug=False):
+        return self.pmr.read_pointer(pointer_name=pointer_name, debug=debug)

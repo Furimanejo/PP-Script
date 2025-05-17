@@ -48,6 +48,7 @@ class ProcessMemoryReader:
     def read_pointer(self, pointer_name, debug=False):
         pointer: Pointer = self._pointers[pointer_name]
         value = pointer.read()
+        debug and self._logger.debug(f"{pointer_name}: {value}")
         return value
 
 
