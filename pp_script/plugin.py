@@ -79,11 +79,11 @@ class Plugin:
         rect, focused = self._rect_focus_getter()
 
         if rect != self._rect:
-            self._logger.info(f"Setting rect to {rect}")
+            self._logger.debug(f"Setting rect to {rect}")
             self._rect = rect
 
         if focused != self._focused:
-            self._logger.info(f"Setting focused to {focused}")
+            self._logger.debug(f"Setting focused to {focused}")
             self._focused = focused
 
     def _raise_event(self, values: dict):
