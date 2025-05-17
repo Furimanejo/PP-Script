@@ -1,7 +1,7 @@
-from src.abstract_plugin import AbstractPlugin
+from pp_script.plugin import Plugin
 import inspect
 
-importables = AbstractPlugin().get_importable_attributes()
+importables = Plugin().get_importable_attributes()
 text = ""
 for name, attribute in importables.items():
     if inspect.isroutine(attribute):
