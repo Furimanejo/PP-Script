@@ -1,3 +1,4 @@
+import logging
 from typing import Callable, Any
 from pymem import Pymem
 from pymem.process import module_from_name
@@ -5,7 +6,8 @@ from pymem.exception import ProcessNotFound
 
 
 class ProcessMemoryReader:
-    def __init__(self, values: dict) -> None:
+    def __init__(self, values: dict, logger: logging.Logger) -> None:
+        self._logger = logger.getChild("pmr")
         self._process_name = values.get("process")
 
         self._pointers: dict[str, Pointer] = {}
@@ -16,6 +18,8 @@ class ProcessMemoryReader:
         self._memory = None
 
     def update(self):
+        has_prev_memory = self._memory is not None
+
         if not self._memory:
             try:
                 self._memory = Pymem(self._process_name)
@@ -31,6 +35,12 @@ class ProcessMemoryReader:
                     pass
                 else:
                     raise e
+
+        has_memory = self._memory is not None
+        if has_memory and not has_prev_memory:
+            self._logger.debug("Found process memory")
+        if has_prev_memory and not has_memory:
+            self._logger.debug("Lost process memory")
 
         for p in self._pointers.values():
             p.update(self._memory)

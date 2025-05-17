@@ -64,7 +64,7 @@ class Plugin:
             self._cv = ComputerVision(cv_values, self._path)
 
         if pmr_values := data.get("pmr"):
-            self._pmr = ProcessMemoryReader(pmr_values)
+            self._pmr = ProcessMemoryReader(pmr_values, self._logger)
 
     def update(self):
         self.events = {}
