@@ -38,9 +38,9 @@ class ProcessMemoryReader:
 
         has_memory = self._memory is not None
         if has_memory and not has_prev_memory:
-            self._logger.debug("Found process memory")
+            self._logger.info(f"Found process memory: {self._process_name}")
         if has_prev_memory and not has_memory:
-            self._logger.debug("Lost process memory")
+            self._logger.info(f"Lost process memory: {self._process_name}")
 
         for p in self._pointers.values():
             p.update(self._memory)
