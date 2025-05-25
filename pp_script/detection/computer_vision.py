@@ -5,7 +5,7 @@ import cv2 as cv
 import numpy as np
 from os import path as os_path, makedirs
 
-from ..core import _logger, Rect, read_file_at_folder_or_zip
+from pp_script.core import _logger, Rect, read_file_at_folder_or_zip
 
 _logger = _logger.getChild("cv")
 
@@ -74,7 +74,7 @@ class ComputerVision:
         top = min([r.top for r in rects])
         right = max([r.right for r in rects])
         bottom = max([r.bottom for r in rects])
-        regions_crop = Rect((left, top, right - left, bottom - top))
+        regions_crop = Rect((left, top, right - left + 1, bottom - top + 1))
         try:
             self._capture = Capture(regions_crop)
             return True
@@ -106,9 +106,18 @@ class ComputerVision:
         if t := template_img.dtype != np.uint8:
             raise Exception(f"Unexpected image type {t}")
 
-        match_results = cv.matchTemplate(region_img, template_img, cv.TM_SQDIFF)
+        if mask_color := template_obj.mask_color:
+            mask = cv.inRange(template_img, mask_color, mask_color)
+            mask = cv.bitwise_not(mask)
+        else:
+            mask = cv.inRange(template_img, (0, 0, 0), (255, 255, 255))
+
+        match_results = cv.matchTemplate(
+            region_img, template_img, cv.TM_SQDIFF, mask=mask
+        )
         min_val, max_val, min_loc, max_loc = cv.minMaxLoc(match_results)
-        confidence = 1 - min_val / (template_img.size * 255 * 255)
+        max_possible = cv.countNonZero(mask) * template_img.shape[2] * 255 * 255
+        confidence = 1 - min_val / max_possible
         result = {
             "success": confidence >= template_obj.threshold,
             "region": region_name,
@@ -117,7 +126,6 @@ class ComputerVision:
             "h_pos_percentage": min_loc[0] / region_img.shape[1],
             "v_pos_percentage": min_loc[1] / region_img.shape[0],
         }
-        debug and _logger.debug(result)
         return result
 
     def get_region_fill_ratio(self, region_name, filter, debug=False):
@@ -125,7 +133,9 @@ class ComputerVision:
         region_obj = self._regions[region_name]
         region_crop = self._capture.get_region_crop(region_obj, filter=filter)
         debug and self._save_image(region_crop, f"region {region_name}")
-        assert len(region_crop.shape) == 2
+        assert (
+            len(region_crop.shape) == 2
+        ), f"""The filter used to read the fill ratio of region {region_name} did not result in a binary image"""
         return np.count_nonzero(region_crop) / region_crop.size
 
     def _save_image(self, image, name):
@@ -194,12 +204,11 @@ class Template:
         self.scaling_method = values["scaling_method"]
         self._scaled_and_filtered = {}
         self._original_image = None
-        try:
-            f = read_file_at_folder_or_zip(folder_path, values["file"])
-            img_array = np.frombuffer(f, dtype=np.uint8)
-            self._original_image = cv.imdecode(img_array, cv.IMREAD_COLOR)
-        except FileNotFoundError:
-            return
+
+        f = read_file_at_folder_or_zip(folder_path, values["file"])
+        img_array = np.frombuffer(f, dtype=np.uint8)
+        self._original_image = cv.imdecode(img_array, cv.IMREAD_COLOR)
+        self.mask_color = values.get("mask_color", None)
 
     def scale(self, rect: Rect):
         rx, ry, rw, rh = rect.as_tuple()

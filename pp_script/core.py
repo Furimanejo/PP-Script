@@ -112,12 +112,12 @@ class Rect:
             width = next((rect[k] for k in ("w", "width") if k in rect), None)
             if width is None:
                 right = next((rect[k] for k in ("r", "right") if k in rect))
-                width = right - left
+                width = right - left + 1
             top = next((rect[k] for k in ("y", "top") if k in rect))
             height = next((rect[k] for k in ("h", "height") if k in rect), None)
             if height is None:
                 bottom = next((rect[k] for k in ("b", "bottom") if k in rect))
-                height = bottom - top
+                height = bottom - top + 1
             rect = (left, top, width, height)
 
         rect = [int(v) for v in rect]
@@ -141,19 +141,11 @@ class Rect:
 
     @property
     def right(self):
-        return self.left + self.width
-
-    @right.setter
-    def right(self, value):
-        self.width = value - self.left
+        return self.left + self.width - 1
 
     @property
     def bottom(self):
-        return self.top + self.height
-
-    @bottom.setter
-    def bottom(self, value):
-        self.height = value - self.top
+        return self.top + self.height - 1
 
     def as_bbox(self):
         return (self.left, self.top, self.left + self.width, self.top + self.height)

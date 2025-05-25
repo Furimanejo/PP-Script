@@ -1,5 +1,6 @@
 import typing
 import yaml
+import traceback
 
 from RestrictedPython import compile_restricted, safe_globals, limited_builtins
 from RestrictedPython.Eval import default_guarded_getiter, default_guarded_getitem
@@ -18,11 +19,12 @@ restricted_python_globals["_write_"] = full_write_guard
 restricted_python_globals["min"] = min
 restricted_python_globals["max"] = max
 restricted_python_globals["len"] = len
+restricted_python_globals["enumerate"] = enumerate
 
-from .core import _logger as parent_logger, read_file_at_folder_or_zip
+from pp_script.core import _logger as parent_logger, read_file_at_folder_or_zip
 
 logger = parent_logger.getChild("import")
-from .plugin import Plugin
+from pp_script.plugin import Plugin
 
 
 def import_plugin_at_folder(folder_path: str) -> typing.Type[Plugin] | None:
@@ -68,7 +70,12 @@ def import_plugin_at_folder(folder_path: str) -> typing.Type[Plugin] | None:
 
         def update(self):
             super().update()
-            self._imported_update and self._imported_update()
+            try:
+                self._imported_update and self._imported_update()
+                pass
+            except Exception as e:
+                tb = traceback.format_exc()
+                raise RuntimeError(f"{tb}")
 
         def terminate(self):
             super().terminate()

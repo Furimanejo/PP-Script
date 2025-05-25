@@ -13,6 +13,7 @@ from pp_script.core import (
 )
 from pp_script.detection.computer_vision import ComputerVision, cv_in_range
 from pp_script.detection.mem_reader import ProcessMemoryReader
+from pp_script.detection.http import HTTPHandler
 
 
 class Plugin:
@@ -26,9 +27,10 @@ class Plugin:
         self._rect: Rect = None
         self._focused: bool = None
         self._rect_focus_getter = lambda: None, False
+        self.events: dict[typing.Any, Event] = {}
         self._cv: ComputerVision = None
         self._pmr: ProcessMemoryReader = None
-        self.events: dict[typing.Any, Event] = {}
+        self._http_handler = None
 
     def get_importable_attributes(self):
         attr = {
@@ -37,11 +39,15 @@ class Plugin:
             "log_debug": self._logger.debug,
             "get_time": get_time,
             "PPVar": PPVar,
+            # CV
             "capture_regions": self.capture_regions,
             "match_template": self.match_template,
             "get_region_fill_ratio": self.get_region_fill_ratio,
             "cv_in_range": cv_in_range,
+            # Process Memory Reading
             "read_pointer": self.read_pointer,
+            # HTTP
+            "http_get": self.http_get,
         }
 
         return attr
@@ -65,6 +71,9 @@ class Plugin:
 
         if pmr_values := data.get("pmr"):
             self._pmr = ProcessMemoryReader(pmr_values, self._logger)
+
+        if http_values := data.get("http"):
+            self._http_handler = HTTPHandler(http_values, self._logger)
 
     def update(self):
         self.events = {}
@@ -129,3 +138,12 @@ class Plugin:
 
     def read_pointer(self, pointer_name: str, debug=False):
         return self.pmr.read_pointer(pointer_name=pointer_name, debug=debug)
+
+    @property
+    def http_handler(self):
+        if not self._http_handler:
+            raise Exception("Internal HTTP object was not initialized.")
+        return self._http_handler
+
+    def http_get(self, path_name: str) -> dict:
+        return self.http_handler.get(path_name=path_name)
