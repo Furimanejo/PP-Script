@@ -17,7 +17,7 @@ class HTTPHandler:
     def get(self, path_name):
         url = f"https://127.0.0.1:{self._port}/{self._paths[path_name]}"
         try:
-            response = requests.get(url=url, verify=False)
+            response = requests.get(url=url, verify=False, timeout=0.1)
             if 200 <= response.status_code <= 204:
                 return {"httpStatus": response.status_code, "data": response.json()}
             return response.json()
