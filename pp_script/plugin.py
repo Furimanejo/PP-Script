@@ -26,7 +26,8 @@ class Plugin:
         self._logger = _logger.getChild(self._name)
         self._rect: Rect = None
         self._focused: bool = None
-        self._rect_focus_getter = lambda: None, False
+        self._target_window_regex = None
+        # self._rect_focus_getter = lambda: None, False
         self.events: dict[typing.Any, Event] = {}
         self._cv: ComputerVision = None
         self._pmr: ProcessMemoryReader = None
@@ -54,10 +55,11 @@ class Plugin:
 
     def _set_plugin_data(self, data: dict):
         if target_window := data.get("target_window"):
-            self._rect_focus_getter = lambda: get_window_rect_and_focus(target_window)
+            self._target_window_regex = target_window
+            # self._rect_focus_getter = lambda: get_window_rect_and_focus(target_window)
 
-        if target_monitor := data.get("target_monitor"):
-            self._rect_focus_getter = lambda: (get_monitor_rect(target_monitor), True)
+        # if target_monitor := data.get("target_monitor"):
+        #     self._rect_focus_getter = lambda: (get_monitor_rect(target_monitor), True)
 
         events: dict = data.get("events", {})
         for name, values in events.items():
@@ -77,23 +79,36 @@ class Plugin:
 
     def update(self):
         self.events = {}
-        self._update_rect_and_focus()
+        rect, focused = self._get_rect_and_focus()
+        self._set_rect(rect)
+        self._set_focused(focused)
         self._cv and self._cv.update(self._rect, self._focused)
         self._pmr and self._pmr.update()
 
-    def post_update(self):
-        pass
+    @property
+    def rect(self):
+        return self._rect
 
-    def _update_rect_and_focus(self):
-        rect, focused = self._rect_focus_getter()
-
+    def _set_rect(self, rect):
         if rect != self._rect:
             self._logger.debug(f"Setting rect to {rect}")
             self._rect = rect
 
+    @property
+    def focused(self):
+        return self._focused
+
+    def _set_focused(self, focused):
         if focused != self._focused:
             self._logger.debug(f"Setting focused to {focused}")
             self._focused = focused
+
+    def _get_rect_and_focus(self):
+        rect = None
+        focused = False
+        if self._target_window_regex:
+            rect, focused = get_window_rect_and_focus(self._target_window_regex)
+        return rect, focused
 
     def _raise_event(self, values: dict):
         event_id = values.pop("id", uuid4())
@@ -139,6 +154,7 @@ class Plugin:
     def read_pointer(self, pointer_name: str, debug=False):
         return self.pmr.read_pointer(pointer_name=pointer_name, debug=debug)
 
+    # HTTP attributes
     @property
     def http_handler(self):
         if not self._http_handler:
