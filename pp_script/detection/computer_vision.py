@@ -52,17 +52,14 @@ class ComputerVision:
             self._templates[name] = Template(values, folder_path=path)
 
     def update(self, rect: Rect, enable: bool):
-        if rect and (rect.height <= 0 or rect.height <= 0):
-            rect = None
-        if rect:
-            if rect != self._rect:
-                for region in self._regions.values():
-                    region.scale(rect)
-                for template in self._templates.values():
-                    template.scale(rect)
-        self._rect = rect
-        self._enabled = enable
         self._capture = None
+        self._enabled = enable
+        if rect != self._rect:
+            for region in self._regions.values():
+                region.scale(rect)
+            for template in self._templates.values():
+                template.scale(rect)
+            self._rect = rect
 
     def capture_regions(self, regions: list[str] = [], debug=False):
         if not self._enabled or not self._rect:

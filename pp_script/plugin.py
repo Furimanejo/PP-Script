@@ -24,14 +24,17 @@ class Plugin:
         self._event_types: dict[str:EventType] = {}
         super().__init__()
         self._logger = _logger.getChild(self._name)
+
         self._rect: Rect = None
         self._focused: bool = None
         self._target_window_regex = None
-        # self._rect_focus_getter = lambda: None, False
-        self.events: dict[typing.Any, Event] = {}
+        self._target_monitor = 1
+
         self._cv: ComputerVision = None
         self._pmr: ProcessMemoryReader = None
         self._http_handler = None
+
+        self.events: dict[typing.Any, Event] = {}
 
     def get_importable_attributes(self):
         attr = {
@@ -56,10 +59,6 @@ class Plugin:
     def _set_plugin_data(self, data: dict):
         if target_window := data.get("target_window"):
             self._target_window_regex = target_window
-            # self._rect_focus_getter = lambda: get_window_rect_and_focus(target_window)
-
-        # if target_monitor := data.get("target_monitor"):
-        #     self._rect_focus_getter = lambda: (get_monitor_rect(target_monitor), True)
 
         events: dict = data.get("events", {})
         for name, values in events.items():
@@ -77,8 +76,13 @@ class Plugin:
         if http_values := data.get("http"):
             self._http_handler = HTTPHandler(http_values, self._logger)
 
+        self._update_internals()
+
     def update(self):
         self.events = {}
+        self._update_internals()
+
+    def _update_internals(self):
         rect, focused = self._get_rect_and_focus()
         self._set_rect(rect)
         self._set_focused(focused)
@@ -108,6 +112,8 @@ class Plugin:
         focused = False
         if self._target_window_regex:
             rect, focused = get_window_rect_and_focus(self._target_window_regex)
+        if rect is None:
+            rect = get_monitor_rect(self._target_monitor)
         return rect, focused
 
     def _raise_event(self, values: dict):

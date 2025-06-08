@@ -187,7 +187,19 @@ def get_window_rect_and_focus(regex: str):
             window = results[0]
 
     if window:
-        rect = Rect(window.getClientFrame()._asdict())
+        rect = window.getClientFrame()
+        rect = Rect(
+            (
+                rect.left,
+                rect.top,
+                rect.right - rect.left,
+                rect.bottom - rect.top,
+            )
+        )
+        # Rect can be {'left': -32000, 'top': -32000, 'width': 1, 'height': 1} on minimized windows
+        if rect.height <= 0 or rect.height <= 0:
+            rect = None
+
         focused = window.isActive
 
     return rect, focused
