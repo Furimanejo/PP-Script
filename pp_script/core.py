@@ -197,7 +197,7 @@ def get_window_rect_and_focus(regex: str):
             )
         )
         # Rect can be {'left': -32000, 'top': -32000, 'width': 1, 'height': 1} on minimized windows
-        if rect.height <= 0 or rect.height <= 0:
+        if rect.left <= 0 and rect.top <= 0:
             rect = None
 
         focused = window.isActive

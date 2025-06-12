@@ -11,7 +11,7 @@ from pp_script.core import (
     get_time,
     PPVar,
 )
-from pp_script.detection.computer_vision import ComputerVision, cv_in_range
+from pp_script.detection.computer_vision import ComputerVision, cv_in_range, cv_to_hsv
 from pp_script.detection.mem_reader import ProcessMemoryReader
 from pp_script.detection.http import HTTPHandler
 
@@ -28,6 +28,7 @@ class Plugin:
         self._rect: Rect = None
         self._focused: bool = None
         self._target_window_regex = None
+        self._force_focus = False
         self._target_monitor = 1
 
         self._cv: ComputerVision = None
@@ -48,6 +49,7 @@ class Plugin:
             "match_template": self.match_template,
             "get_region_fill_ratio": self.get_region_fill_ratio,
             "cv_in_range": cv_in_range,
+            "cv_to_hsv": cv_to_hsv,
             # Process Memory Reading
             "read_pointer": self.read_pointer,
             # HTTP
@@ -114,6 +116,8 @@ class Plugin:
             rect, focused = get_window_rect_and_focus(self._target_window_regex)
         if rect is None:
             rect = get_monitor_rect(self._target_monitor)
+        if self._force_focus:
+            focused = True
         return rect, focused
 
     def _raise_event(self, values: dict):

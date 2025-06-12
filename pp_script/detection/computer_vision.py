@@ -130,9 +130,9 @@ class ComputerVision:
         region_obj = self._regions[region_name]
         region_crop = self._capture.get_region_crop(region_obj, filter=filter)
         debug and self._save_image(region_crop, f"region {region_name}")
-        assert (
-            len(region_crop.shape) == 2
-        ), f"""The filter used to read the fill ratio of region {region_name} did not result in a binary image"""
+        # assert (
+        #     len(region_crop.shape) == 2
+        # ), f"""The filter used to read the fill ratio of region {region_name} did not result in a binary image"""
         return np.count_nonzero(region_crop) / region_crop.size
 
     def _save_image(self, image, name):
@@ -198,7 +198,7 @@ class Region:
 class Template:
     def __init__(self, values: dict, folder_path: str):
         self.threshold = values["threshold"]
-        self.scaling_method = values["scaling_method"]
+        self._scaling_method = values["scaling_method"]
         self._scaled_and_filtered = {}
         self._original_image = None
 
@@ -211,9 +211,9 @@ class Template:
         rx, ry, rw, rh = rect.as_tuple()
         h = self._original_image.shape[0]
         w = self._original_image.shape[1]
-        _, _, scaled_w, scaled_h = self.scaling_method(0, 0, w, h, rx, ry, rw, rh)
-        scaled_w = int(scaled_w)
-        scaled_h = int(scaled_h)
+        _, _, scaled_w, scaled_h = self._scaling_method(0, 0, w, h, rx, ry, rw, rh)
+        scaled_w = max(1, int(scaled_w))
+        scaled_h = max(1, int(scaled_h))
 
         self._scaled_and_filtered = {}
         if scaled_w != w or scaled_h != h:
@@ -230,4 +230,16 @@ class Template:
 
 
 def cv_in_range(img, lower: tuple, upper: tuple):
-    return cv.inRange(img, lower, upper)
+    if lower[0] > upper[0]:
+        # For HSV filters around the red hue (H=0) the H value can wrap around,
+        # for example, if lower=(200, 10, 10) and upper=(30, 50, 50) then we do
+        # range (0, 10, 10)(30, 50, 50) + range (200, 10, 10)(255, 50, 50)
+        first = cv.inRange(img, (0,) + lower[1:], upper)
+        second = cv.inRange(img, lower, (255,) + upper[1:])
+        return cv.bitwise_or(first, second)
+    else:
+        return cv.inRange(img, lower, upper)
+
+
+def cv_to_hsv(img):
+    return cv.cvtColor(img, cv.COLOR_BGR2HSV_FULL)
