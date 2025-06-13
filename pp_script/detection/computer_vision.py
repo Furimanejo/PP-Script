@@ -11,12 +11,11 @@ _logger = _logger.getChild("cv")
 
 
 class ComputerVision:
-    def __init__(self, cv_values: dict, path: str):
-        self._folder = path
+    def __init__(self, cv_values: dict, load_path: str, debug_path: str):
+        self._debug_folder = os_path.join(debug_path, "cv")
         self._capture: Capture = None
         self._rect: Rect = None
         self._enabled = False
-        # self._do_cache_filters =
 
         cv_values = copy.deepcopy(cv_values)
         _scaling_method = cv_values.get("scaling_method", (1920, 1080))
@@ -49,7 +48,7 @@ class ComputerVision:
             if not isinstance(values, dict):
                 raise ValueError()
             values.setdefault("scaling_method", _scaling_method)
-            self._templates[name] = Template(values, folder_path=path)
+            self._templates[name] = Template(values, folder_path=load_path)
 
     def update(self, rect: Rect, enable: bool):
         self._capture = None
@@ -103,18 +102,12 @@ class ComputerVision:
         if t := template_img.dtype != np.uint8:
             raise Exception(f"Unexpected image type {t}")
 
-        if mask_color := template_obj.mask_color:
-            mask = cv.inRange(template_img, mask_color, mask_color)
-            mask = cv.bitwise_not(mask)
-        else:
-            mask = cv.inRange(template_img, (0, 0, 0), (255, 255, 255))
-
+        mask = template_obj.mask
         match_results = cv.matchTemplate(
             region_img, template_img, cv.TM_SQDIFF, mask=mask
         )
         min_val, max_val, min_loc, max_loc = cv.minMaxLoc(match_results)
-        max_possible = cv.countNonZero(mask) * template_img.shape[2] * 255 * 255
-        confidence = 1 - min_val / max_possible
+        confidence = 1 - min_val / template_obj.size
         result = {
             "success": confidence >= template_obj.threshold,
             "region": region_name,
@@ -125,20 +118,31 @@ class ComputerVision:
         }
         return result
 
-    def get_region_fill_ratio(self, region_name, filter, debug=False):
+    def get_region_fill_ratio(self, region_name, filter, div=(0, 1, 0, 1), debug=False):
         self._assert_capture()
         region_obj = self._regions[region_name]
+
         region_crop = self._capture.get_region_crop(region_obj, filter=filter)
-        debug and self._save_image(region_crop, f"region {region_name}")
-        # assert (
-        #     len(region_crop.shape) == 2
-        # ), f"""The filter used to read the fill ratio of region {region_name} did not result in a binary image"""
+
+        height, width = region_crop.shape[:2]
+        left = int(width * div[0])
+        right = int(width * div[1])
+        top = int(height * div[2])
+        bottom = int(height * div[3])
+        if 0 <= left <= right <= width and 0 <= top <= bottom <= height:
+            region_crop = region_crop[top:bottom, left:right]
+        else:
+            raise ValueError("Invalid crop dimensions")
+
+        debug and self._save_image(
+            region_crop, f"{region_name}_region_{left}_{right}_{top}_{bottom}"
+        )
+        if len(region_crop.shape) != 2:
+            pass  # log warning
         return np.count_nonzero(region_crop) / region_crop.size
 
     def _save_image(self, image, name):
-        if self._folder.endswith(".zip"):
-            return
-        path = os_path.join(self._folder, "cv_debug")
+        path = self._debug_folder
         makedirs(path, exist_ok=True)
         path = os_path.join(path, f"{name}.png")
         cv.imwrite(path, image)
@@ -199,13 +203,15 @@ class Template:
     def __init__(self, values: dict, folder_path: str):
         self.threshold = values["threshold"]
         self._scaling_method = values["scaling_method"]
+        self._mask_color = values.get("mask_color", None)
         self._scaled_and_filtered = {}
         self._original_image = None
 
         f = read_file_at_folder_or_zip(folder_path, values["file"])
         img_array = np.frombuffer(f, dtype=np.uint8)
         self._original_image = cv.imdecode(img_array, cv.IMREAD_COLOR)
-        self.mask_color = values.get("mask_color", None)
+        self.mask = None
+        self.size = None
 
     def scale(self, rect: Rect):
         rx, ry, rw, rh = rect.as_tuple()
@@ -215,12 +221,18 @@ class Template:
         scaled_w = max(1, int(scaled_w))
         scaled_h = max(1, int(scaled_h))
 
-        self._scaled_and_filtered = {}
+        template = self._original_image
         if scaled_w != w or scaled_h != h:
-            resized = cv.resize(self._original_image.copy(), (scaled_w, scaled_h))
-            self._scaled_and_filtered[None] = resized
+            template = cv.resize(template.copy(), (scaled_w, scaled_h))
+        self._scaled_and_filtered = {None: template}
+
+        if mask_color := self._mask_color:
+            mask = cv.inRange(template, mask_color, mask_color)
+            mask = cv.bitwise_not(mask)
         else:
-            self._scaled_and_filtered[None] = self._original_image
+            mask = cv.inRange(template, (0, 0, 0), (255, 255, 255))
+        self.mask = mask
+        self.size = cv.countNonZero(mask) * template.shape[2] * 255 * 255
 
     def scaled_and_filtered(self, filter: callable = None) -> np.ndarray:
         if filter not in self._scaled_and_filtered:

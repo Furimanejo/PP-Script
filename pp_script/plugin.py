@@ -17,13 +17,14 @@ from pp_script.detection.http import HTTPHandler
 
 
 class Plugin:
-    _name = "Abstract Plugin"
-    _path = ""
+    NAME: str = "Undefined Name Plugin"
+    PATH: str = None
+    DEBUG_FOLDER: str = None
 
     def __init__(self):
         self._event_types: dict[str:EventType] = {}
         super().__init__()
-        self._logger = _logger.getChild(self._name)
+        self._logger = _logger.getChild(self.NAME)
 
         self._rect: Rect = None
         self._focused: bool = None
@@ -70,7 +71,7 @@ class Plugin:
             self._event_types[name] = EventType(values)
 
         if cv_values := data.get("cv"):
-            self._cv = ComputerVision(cv_values, self._path)
+            self._cv = ComputerVision(cv_values, self.PATH, self.DEBUG_FOLDER)
 
         if pmr_values := data.get("pmr"):
             self._pmr = ProcessMemoryReader(pmr_values, self._logger)
@@ -149,9 +150,11 @@ class Plugin:
             template_name=template, region_name=region, filter=filter, debug=debug
         )
 
-    def get_region_fill_ratio(self, region: str, filter, debug: bool = False) -> float:
+    def get_region_fill_ratio(
+        self, region: str, filter=None, div: tuple = (0, 1, 0, 1), debug: bool = False
+    ) -> float:
         return self.cv.get_region_fill_ratio(
-            region_name=region, filter=filter, debug=debug
+            region_name=region, filter=filter, div=div, debug=debug
         )
 
     # PMR attributes

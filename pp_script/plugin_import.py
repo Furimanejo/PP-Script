@@ -27,57 +27,62 @@ logger = parent_logger.getChild("import")
 from pp_script.plugin import Plugin
 
 
-def import_plugin_at_folder(folder_path: str) -> typing.Type[Plugin] | None:
+class ImportedPlugin(Plugin):
+    @classmethod
+    def set_class_data(cls, path, metadata):
+        cls.PATH = path
+        cls.NAME = metadata["name"]
+        cls.SCRIPT_FILE_NAME = metadata["script"]
+
+    def __init__(self):
+        super().__init__()
+        script = read_file_at_folder_or_zip(self.PATH, self.SCRIPT_FILE_NAME)
+        script = script.decode("utf-8")
+        # Developers might want import statements for static analysis and
+        # autocompletion, but imports can't be compiled/executed, so we
+        # remove them from the file first
+        lines = script.splitlines()
+        for line in lines:
+            if "import" in line:
+                lines = lines[1:]
+            else:
+                break
+        script = "\n".join(lines)
+        compiled = compile_restricted(script, self.SCRIPT_FILE_NAME, "exec")
+
+        _globals = restricted_python_globals.copy()
+        importable_attrs = self.get_importable_attributes()
+        _globals.update(importable_attrs)
+        _locals = {}
+        exec(compiled, _globals, _locals)
+        _globals.update(_locals)
+
+        self._imported_update = _locals.get("update", None)
+        if self._imported_update is None:
+            self._logger.warning("Update fuction not found")
+
+    def update(self):
+        super().update()
+        try:
+            self._imported_update and self._imported_update()
+            pass
+        except Exception as e:
+            tb = traceback.format_exc()
+            raise RuntimeError(f"{tb}")
+
+    def terminate(self):
+        super().terminate()
+
+
+def import_plugin_at_folder(folder_path: str) -> typing.Type[ImportedPlugin] | None:
     try:
         file = read_file_at_folder_or_zip(folder_path, "metadata.yaml")
     except FileNotFoundError:
         # No metadata file, not a plugin folder
         return
 
-    data = yaml.safe_load(file)
+    class ThisImportedPlugin(ImportedPlugin): ...
 
-    class ImportedPlugin(Plugin):
-        _name = data["name"]
-        _path = folder_path
-
-        def __init__(self):
-            super().__init__()
-            script_file_name = data["script"]
-            script = read_file_at_folder_or_zip(self._path, script_file_name)
-            script = script.decode("utf-8")
-            # Developers might want import statements for static analysis and
-            # autocompletion, but imports can't be compiled/executed, so we
-            # remove them from the file first
-            lines = script.splitlines()
-            for line in lines:
-                if "import" in line:
-                    lines = lines[1:]
-                else:
-                    break
-            script = "\n".join(lines)
-            compiled = compile_restricted(script, script_file_name, "exec")
-
-            _globals = restricted_python_globals.copy()
-            importable_attrs = self.get_importable_attributes()
-            _globals.update(importable_attrs)
-            _locals = {}
-            exec(compiled, _globals, _locals)
-            _globals.update(_locals)
-
-            self._imported_update = _locals.get("update", None)
-            if self._imported_update is None:
-                self._logger.warning("Update fuction not found")
-
-        def update(self):
-            super().update()
-            try:
-                self._imported_update and self._imported_update()
-                pass
-            except Exception as e:
-                tb = traceback.format_exc()
-                raise RuntimeError(f"{tb}")
-
-        def terminate(self):
-            super().terminate()
-
-    return ImportedPlugin
+    metadata = yaml.safe_load(file)
+    ThisImportedPlugin.set_class_data(folder_path, metadata)
+    return ThisImportedPlugin
