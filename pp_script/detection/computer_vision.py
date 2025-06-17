@@ -20,16 +20,19 @@ class ComputerVision:
         cv_values = copy.deepcopy(cv_values)
         _scaling_method = cv_values.get("scaling_method", (1920, 1080))
         if isinstance(_scaling_method, tuple):
-            resolution_width = _scaling_method[0]
-            resolution_height = _scaling_method[1]
+            ref_rw, ref_rh = _scaling_method
 
-            def scale_from_resolution(x, y, w, h, rx, ry, rw, rh):
-                x *= rw / resolution_width
-                x += rx
-                y *= rh / resolution_height
-                y += ry
-                w *= rw / resolution_width
-                h *= rh / resolution_height
+            # scale keeping aspect ratio, possibly letterboxing
+            def scale_from_resolution(x, y, w, h, rw, rh):
+                scale = min(rw / ref_rw, rh / ref_rh)
+                desired_rw = ref_rw * scale
+                desired_rh = ref_rh * scale
+                offset_x = (rw - desired_rw) / 2
+                offset_y = (rh - desired_rh) / 2
+                x = x * scale + offset_x
+                y = y * scale + offset_y
+                w *= scale
+                h *= scale
                 return x, y, w, h
 
             _scaling_method = scale_from_resolution
@@ -195,7 +198,7 @@ class Region:
     def scale(self, rect: Rect):
         rx, ry, rw, rh = rect.as_tuple()
         x, y, w, h = self._original_rect.as_tuple()
-        x, y, w, h = self._scaling_method(x, y, w, h, rx, ry, rw, rh)
+        x, y, w, h = self._scaling_method(x, y, w, h, rw, rh)
         self._scaled_rect = Rect((x, y, w, h))
 
 
@@ -217,7 +220,7 @@ class Template:
         rx, ry, rw, rh = rect.as_tuple()
         h = self._original_image.shape[0]
         w = self._original_image.shape[1]
-        _, _, scaled_w, scaled_h = self._scaling_method(0, 0, w, h, rx, ry, rw, rh)
+        _, _, scaled_w, scaled_h = self._scaling_method(0, 0, w, h, rw, rh)
         scaled_w = max(1, int(scaled_w))
         scaled_h = max(1, int(scaled_h))
 
