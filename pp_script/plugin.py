@@ -11,7 +11,12 @@ from pp_script.core import (
     get_time,
     PPVar,
 )
-from pp_script.detection.computer_vision import ComputerVision, cv_in_range, cv_to_hsv
+from pp_script.computer_vision import (
+    ComputerVision,
+    cv_in_range,
+    cv_to_hsv,
+    cv_to_gray,
+)
 from pp_script.detection.mem_reader import ProcessMemoryReader
 from pp_script.detection.http import HTTPHandler
 
@@ -46,11 +51,12 @@ class Plugin:
             "get_time": get_time,
             "PPVar": PPVar,
             # CV
-            "capture_regions": self.capture_regions,
+            "capture": self.capture,
             "match_template": self.match_template,
             "get_region_fill_ratio": self.get_region_fill_ratio,
             "cv_in_range": cv_in_range,
             "cv_to_hsv": cv_to_hsv,
+            "cv_to_gray": cv_to_gray,
             # Process Memory Reading
             "read_pointer": self.read_pointer,
             # HTTP
@@ -140,21 +146,37 @@ class Plugin:
             raise Exception("Internal CV object was not initialized.")
         return self._cv
 
-    def capture_regions(self, regions: list[str] = [], debug=False) -> bool:
-        return self.cv.capture_regions(regions=regions, debug=debug)
+    def capture(self, regions: tuple[str] = (), file: str = None, debug=False) -> bool:
+        return self.cv.capture(regions=regions, file=file, debug=debug)
 
     def match_template(
-        self, template: str, region: str, filter=None, debug: bool = False
-    ) -> None | dict:
+        self,
+        template: str,
+        region: str,
+        filter=None,
+        div: tuple = (0, 1, 0, 1),
+        debug: bool = False,
+    ) -> dict:
         return self.cv.match_template(
-            template_name=template, region_name=region, filter=filter, debug=debug
+            template_name=template,
+            region_name=region,
+            filter=filter,
+            div=div,
+            debug=debug,
         )
 
     def get_region_fill_ratio(
-        self, region: str, filter=None, div: tuple = (0, 1, 0, 1), debug: bool = False
+        self,
+        region: str,
+        filter=None,
+        div: tuple = (0, 1, 0, 1),
+        debug: bool = False,
     ) -> float:
         return self.cv.get_region_fill_ratio(
-            region_name=region, filter=filter, div=div, debug=debug
+            region_name=region,
+            filter=filter,
+            div=div,
+            debug=debug,
         )
 
     # PMR attributes

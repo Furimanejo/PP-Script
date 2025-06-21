@@ -42,9 +42,9 @@ class ImportedPlugin(Plugin):
         # autocompletion, but imports can't be compiled/executed, so we
         # remove them from the file first
         lines = script.splitlines()
-        for line in lines:
-            if "import" in line:
-                lines = lines[1:]
+        for i in range(len(lines)):
+            if "import" in lines[i]:
+                lines[i] = ""
             else:
                 break
         script = "\n".join(lines)
