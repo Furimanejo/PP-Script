@@ -21,6 +21,7 @@ restricted_python_globals["max"] = max
 restricted_python_globals["len"] = len
 restricted_python_globals["enumerate"] = enumerate
 
+CURRENT_PP_SCRIPT_VERSION = 1
 from pp_script.core import _logger as parent_logger, read_file_at_folder_or_zip
 
 logger = parent_logger.getChild("import")
@@ -79,10 +80,17 @@ def import_plugin_at_folder(folder_path: str) -> typing.Type[ImportedPlugin] | N
         file = read_file_at_folder_or_zip(folder_path, "metadata.yaml")
     except FileNotFoundError:
         # No metadata file, not a plugin folder
-        return
+        return None
+
+    metadata: dict = yaml.safe_load(file)
+    required_version = metadata.get("req_lib_ver", 0)
+    if required_version > CURRENT_PP_SCRIPT_VERSION:
+        logger.error(
+            f"""Failed to import plugin at {folder_path}. Plugin requires library version {required_version} and current version is {CURRENT_PP_SCRIPT_VERSION}. Consider checking for newer app versions"""
+        )
+        return None
 
     class ThisImportedPlugin(ImportedPlugin): ...
 
-    metadata = yaml.safe_load(file)
     ThisImportedPlugin.set_class_data(folder_path, metadata)
     return ThisImportedPlugin
