@@ -29,15 +29,10 @@ from pp_script.plugin import Plugin
 
 
 class ImportedPlugin(Plugin):
-    @classmethod
-    def set_class_data(cls, path, metadata):
-        cls.PATH = path
-        cls.NAME = metadata["name"]
-        cls.SCRIPT_FILE_NAME = metadata["script"]
-
     def __init__(self):
         super().__init__()
-        script = read_file_at_folder_or_zip(self.PATH, self.SCRIPT_FILE_NAME)
+        script_name = self.METADATA.get("script")
+        script = read_file_at_folder_or_zip(self.PATH, script_name)
         script = script.decode("utf-8")
         # Developers might want import statements for static analysis and
         # autocompletion, but imports can't be compiled/executed, so we
@@ -49,8 +44,8 @@ class ImportedPlugin(Plugin):
             else:
                 break
         script = "\n".join(lines)
-        compiled = compile_restricted(script, self.SCRIPT_FILE_NAME, "exec")
 
+        compiled = compile_restricted(script, script_name, "exec")
         _globals = restricted_python_globals.copy()
         importable_attrs = self.get_importable_attributes()
         _globals.update(importable_attrs)
@@ -79,18 +74,22 @@ def import_plugin_at_folder(folder_path: str) -> typing.Type[ImportedPlugin] | N
     try:
         file = read_file_at_folder_or_zip(folder_path, "metadata.yaml")
     except FileNotFoundError:
-        # No metadata file, not a plugin folder
+        logger.error(
+            f"""Failed to import plugin at {folder_path}, no metadata file found in the folder, check for unwanted nested folders"""
+        )
         return None
 
     metadata: dict = yaml.safe_load(file)
     required_version = metadata.get("req_lib_ver", 0)
     if required_version > CURRENT_PP_SCRIPT_VERSION:
         logger.error(
-            f"""Failed to import plugin at {folder_path}. Plugin requires library version {required_version} and current version is {CURRENT_PP_SCRIPT_VERSION}. Consider checking for newer app versions"""
+            f"""Failed to import plugin at {folder_path}, plugin requires library version {required_version}, current version is {CURRENT_PP_SCRIPT_VERSION}. Check for newer app versions"""
         )
         return None
 
     class ThisImportedPlugin(ImportedPlugin): ...
 
-    ThisImportedPlugin.set_class_data(folder_path, metadata)
+    ThisImportedPlugin.METADATA = metadata
+    ThisImportedPlugin.PATH = folder_path
+
     return ThisImportedPlugin

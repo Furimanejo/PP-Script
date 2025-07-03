@@ -22,14 +22,14 @@ from pp_script.detection.http import HTTPHandler
 
 
 class Plugin:
-    NAME: str = "Undefined Name Plugin"
+    METADATA: dict = None
     PATH: str = None
     DEBUG_FOLDER: str = None
 
     def __init__(self):
         self._event_types: dict[str:EventType] = {}
         super().__init__()
-        self._logger = _logger.getChild(self.NAME)
+        self._logger = _logger.getChild(self.METADATA.get("name", "plugin"))
 
         self._rect: Rect = None
         self._focused: bool = None

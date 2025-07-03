@@ -48,8 +48,8 @@ class HTTPHandler:
             def do_OPTIONS(self):
                 return
 
-            # def log_message(self, format, *args):
-            #     return
+            def log_message(self, format, *args):
+                return
 
         server = HTTPServer(("localhost", self._port), POSTHandler)
 
