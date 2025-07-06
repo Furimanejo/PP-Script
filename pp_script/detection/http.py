@@ -15,6 +15,8 @@ class HTTPHandler:
         for name, url in values.get("paths", {}).items():
             assert isinstance(url, str)
             self._paths[name] = f"{url}"
+
+        self._server = None
         if handle_content := values.get("handle_content"):
             self._launch_server(handle_content)
 
@@ -23,7 +25,7 @@ class HTTPHandler:
         try:
             response = requests.get(url=url, verify=False, timeout=0.1)
             if 200 <= response.status_code <= 204:
-                return {"httpStatus": response.status_code, "data": response.json()}
+                return {"http_status": response.status_code, "data": response.json()}
             return response.json()
         except Exception as e:
             return {"exception": str(e)}
@@ -51,13 +53,15 @@ class HTTPHandler:
             def log_message(self, format, *args):
                 return
 
-        server = HTTPServer(("localhost", self._port), POSTHandler)
+        self._server = HTTPServer(("localhost", self._port), POSTHandler)
 
         def serve():
-            server.serve_forever()
+            self._server.serve_forever()
 
         self.handle_post_thread = threading.Thread(target=serve, daemon=True)
         self.handle_post_thread.start()
 
-    def __del__(self):
-        print("A")
+    def terminate(self):
+        if self._server:
+            self._server.shutdown()
+            self._server.server_close()

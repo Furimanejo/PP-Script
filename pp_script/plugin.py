@@ -137,7 +137,8 @@ class Plugin:
         self.events[event_id] = event
 
     def terminate(self):
-        pass
+        if self._http_handler:
+            self._http_handler.terminate()
 
     # CV attributes
     @property
