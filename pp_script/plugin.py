@@ -104,7 +104,7 @@ class Plugin:
 
     def _set_rect(self, rect):
         if rect != self._rect:
-            self._logger.debug(f"Setting rect to {rect}")
+            self._logger.info(f"Setting rect to {rect}")
             self._rect = rect
 
     @property
@@ -113,7 +113,7 @@ class Plugin:
 
     def _set_focused(self, focused):
         if focused != self._focused:
-            self._logger.debug(f"Setting focused to {focused}")
+            self._logger.info(f"Setting focused to {focused}")
             self._focused = focused
 
     def _get_rect_and_focus(self):
