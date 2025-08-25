@@ -11,7 +11,7 @@ from pp_script.core import (
     get_time,
     PPVar,
 )
-from pp_script.computer_vision import (
+from pp_script.detection.computer_vision import (
     ComputerVision,
     cv_in_range,
     cv_to_hsv,

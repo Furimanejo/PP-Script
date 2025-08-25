@@ -3,8 +3,14 @@ import requests
 import urllib3
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
+import socket
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+
+def ensure_can_bind_to(address: tuple[str, int]):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(address)
 
 
 class HTTPHandler:
@@ -31,6 +37,12 @@ class HTTPHandler:
             return {"exception": str(e)}
 
     def _launch_server(self, handle_content):
+        address = ("localhost", self._port)
+        try:
+            ensure_can_bind_to(address=address)
+        except Exception as e:
+            raise Exception(f"Failed to bind to address={address}: {e}") from e
+
         class POSTHandler(BaseHTTPRequestHandler):
             def do_POST(self):
                 content_len = int(self.headers.get("Content-Length", 0))
@@ -45,7 +57,6 @@ class HTTPHandler:
                 self.send_header("Content-Type", "text/plain")
                 self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
-                self.wfile.write(b"Received")
 
             def do_OPTIONS(self):
                 return
@@ -53,7 +64,7 @@ class HTTPHandler:
             def log_message(self, format, *args):
                 return
 
-        self._server = HTTPServer(("localhost", self._port), POSTHandler)
+        self._server = HTTPServer(address, POSTHandler)
 
         def serve():
             self._server.serve_forever()
