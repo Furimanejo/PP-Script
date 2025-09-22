@@ -68,27 +68,34 @@ class PPVar:
 
     def update(self, new_value: float) -> Any:
         if new_value is None:
-            self._value = None
             self._buffer = {}
-            return
+            self._value = None
+            return None
 
         time = get_time()
         self._buffer[time] = new_value
-        keys = list(self._buffer)
-        biggest_key = max(keys)
-        assert biggest_key == time
-        if biggest_key - min(keys) < self._time_window:  # not enough values to analyse
+
+        # Leave the values inside the time window and the first one outside it, delete the rest
+        buffered_enough_values = False
+        for k in sorted(list(self._buffer), reverse=True):
+            if buffered_enough_values:
+                del self._buffer[k]
+                continue
+            time_delta = time - k
+            if self._time_window <= time_delta <= 2 * self._time_window:
+                buffered_enough_values = True
+
+        if not buffered_enough_values:
             return None
 
-        min_key_allowed = biggest_key - self._time_window
-        for k in keys:
-            if k < min_key_allowed:
-                del self._buffer[k]
-            else:
-                if abs(new_value - self._buffer[k]) > self._tolerance:
-                    return None
+        for value in self._buffer.values():
+            if abs(new_value - value) > self._tolerance:
+                return None
 
-        delta = new_value - self._value if self._value is not None else None
+        delta = None
+        if self._value is not None:
+            delta = new_value - self._value
+
         self._value = new_value
         return delta
 

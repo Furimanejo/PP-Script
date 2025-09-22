@@ -21,7 +21,7 @@ restricted_python_globals["max"] = max
 restricted_python_globals["len"] = len
 restricted_python_globals["enumerate"] = enumerate
 
-CURRENT_PP_SCRIPT_VERSION = 1
+CURRENT_PP_SCRIPT_VERSION = 2
 from pp_script.core import _logger as parent_logger, read_file_at_folder_or_zip
 
 logger = parent_logger.getChild("import")
