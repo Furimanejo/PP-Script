@@ -6,7 +6,7 @@ from pp_script.core import (
     EventType,
     Event,
     Rect,
-    get_window_rect_and_focus,
+    get_window_info,
     get_monitor_rect,
     get_time,
     PPVar,
@@ -31,11 +31,12 @@ class Plugin:
         super().__init__()
         self._logger = _logger.getChild(self.METADATA.get("name", "plugin"))
 
-        self._rect: Rect = None
-        self._focused: bool = None
+        self.rect: Rect = None
+        self.focused: bool = None
         self._target_window_regex = None
         self._force_focus = False
         self._target_monitor = 1
+        self._last_focus_and_rect_message = None
 
         self._cv: ComputerVision = None
         self._pmr: ProcessMemoryReader = None
@@ -66,8 +67,7 @@ class Plugin:
         return attr
 
     def _set_plugin_data(self, data: dict):
-        if target_window := data.get("target_window"):
-            self._target_window_regex = target_window
+        self._target_window_regex = data.get("target_window")
 
         events: dict = data.get("events", {})
         for name, values in events.items():
@@ -92,40 +92,34 @@ class Plugin:
         self._update_internals()
 
     def _update_internals(self):
-        rect, focused = self._get_rect_and_focus()
-        self._set_rect(rect)
-        self._set_focused(focused)
-        self._cv and self._cv.update(self._rect, self._focused)
+        self.rect, self.focused, msg = self._update_focus_and_rect()
+        if msg != self._last_focus_and_rect_message:
+            self._logger.info(msg=msg)
+            self._last_focus_and_rect_message = msg
+        self._cv and self._cv.update(self.rect, self.focused)
         self._pmr and self._pmr.update()
 
-    @property
-    def rect(self):
-        return self._rect
-
-    def _set_rect(self, rect):
-        if rect != self._rect:
-            self._logger.info(f"Setting rect to {rect}")
-            self._rect = rect
-
-    @property
-    def focused(self):
-        return self._focused
-
-    def _set_focused(self, focused):
-        if focused != self._focused:
-            self._logger.info(f"Setting focused to {focused}")
-            self._focused = focused
-
-    def _get_rect_and_focus(self):
-        rect = None
-        focused = False
-        if self._target_window_regex:
-            rect, focused = get_window_rect_and_focus(self._target_window_regex)
-        if rect is None:
+    def _update_focus_and_rect(self):
+        if self._target_window_regex is not None:
+            rect, focused, title = get_window_info(self._target_window_regex)
+            if rect is None:
+                rect = get_monitor_rect(self._target_monitor)
+                message = f"Target window '{self._target_window_regex}' not found"
+                message += f", targeting monitor {self._target_monitor} instead"
+            else:
+                message = f"Targeting window '{title}'"
+            if self._force_focus:
+                focused = True
+                message += f", force focused"
+            else:
+                message += ", focused" if focused else ", unfocused"
+        else:
             rect = get_monitor_rect(self._target_monitor)
-        if self._force_focus:
             focused = True
-        return rect, focused
+            message = f"Targeting monitor {self._target_monitor}, focused (always)"
+
+        message += f", rect = {rect}"
+        return rect, focused, message
 
     def _raise_event(self, values: dict):
         event_id = values.pop("id", uuid4())

@@ -184,9 +184,10 @@ def get_monitor_rect(monitor_number: int):
         return Rect(monitors[monitor_number])
 
 
-def get_window_rect_and_focus(regex: str):
+def get_window_info(regex: str):
     rect = None
     focused = False
+    title = None
 
     window = None  # Maybe cache the windows
     if not window:
@@ -209,5 +210,6 @@ def get_window_rect_and_focus(regex: str):
             rect = None
 
         focused = window.isActive
+        title = window.title
 
-    return rect, focused
+    return rect, focused, title
