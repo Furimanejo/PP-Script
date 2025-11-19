@@ -40,8 +40,8 @@ class ComputerVision:
                 offset_y = (rh - desired_rh) / 2
                 x = x * scale + offset_x
                 y = y * scale + offset_y
-                w *= scale
-                h *= scale
+                w = w * scale
+                h = h * scale
                 return x, y, w, h
 
             _scaling_method = scale_from_resolution
@@ -65,12 +65,15 @@ class ComputerVision:
     def update(self, rect: Rect, enable: bool):
         self._capture = None
         self._enabled = enable
-        if rect != self._rect:
-            self._scale_all(rect=rect)
-            self._rect = rect
+        self._try_update_rect(rect=rect)
 
-    def _scale_all(self, rect: Rect, debug=False):
-        for region in self._regions.values():
+    def _try_update_rect(self, rect: Rect):
+        if rect != self._rect:
+            self._rect = rect
+            self._scale_regions_and_templates(rect=rect)
+
+    def _scale_regions_and_templates(self, rect: Rect):
+        for region_name, region in self._regions.items():
             region.scale(rect)
         for template in self._templates.values():
             template.scale(rect)
@@ -97,7 +100,7 @@ class ComputerVision:
             width = img.shape[1]
             height = img.shape[0]
             capture_rect = Rect((0, 0, width, height))
-            self._scale_all(capture_rect, debug=debug)
+            self._scale_regions_and_templates(rect=capture_rect)
 
         if regions:
             regions_bbox = self._regions_bbox(regions)
@@ -118,28 +121,14 @@ class ComputerVision:
                 img = self._capture._captured_image.copy()
                 for region in self._regions.values():
                     left, top, right, bottom = region.rect.as_bbox()
-                    cv.rectangle(
-                        img,
-                        (
-                            left - self._capture._offsets[0],
-                            top - self._capture._offsets[1],
-                        ),
-                        (
-                            right - self._capture._offsets[0] - 1,
-                            bottom - self._capture._offsets[1] - 1,
-                        ),
-                        (0, 255, 0),
-                        1,
-                    )
+                    left += -self._capture._offsets[0]
+                    top += -self._capture._offsets[1]
+                    right += -self._capture._offsets[0] - 1
+                    bottom += -self._capture._offsets[1] - 1
+                    cv.rectangle(img, (left, top), (right, bottom), (0, 255, 0), 1)
                 self._save_image(img, f"capture {regions_text}")
 
         return self._capture is not None
-        # except Exception as e:
-        #     if str(e) == "'_thread._local' object has no attribute 'data'":
-        #         _logger.warning(f"Failed to capture rect {regions_crop}")
-        #     else:
-        #         raise e
-        #     return False
 
     def _assert_capture(self):
         if self._capture is None:
@@ -291,7 +280,8 @@ class Region:
         rx, ry, rw, rh = rect.as_tuple()
         x, y, w, h = self._original_rect.as_tuple()
         x, y, w, h = self._scaling_method(x, y, w, h, rw, rh)
-        self._scaled_rect = Rect((x, y, w, h))
+        new_rect = Rect((x, y, w, h))
+        self._scaled_rect = new_rect
 
 
 class Template:
