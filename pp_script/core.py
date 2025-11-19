@@ -2,6 +2,7 @@ import logging
 import mss
 import os
 import zipfile
+from math import ceil
 from typing import Any
 from pywinctl import getWindowsWithTitle, Re
 from time import perf_counter as get_time
@@ -117,22 +118,25 @@ class Rect:
     def __init__(self, rect):
         if isinstance(rect, dict):
             left = next((rect[k] for k in ("x", "left") if k in rect))
+            top = next((rect[k] for k in ("y", "top") if k in rect))
+
             width = next((rect[k] for k in ("w", "width") if k in rect), None)
+            height = next((rect[k] for k in ("h", "height") if k in rect), None)
+
+            # right and bottom values are inclusive e.g. {x:2, r:5} == {x:2, w:4}
             if width is None:
                 right = next((rect[k] for k in ("r", "right") if k in rect))
                 width = right - left + 1
-            top = next((rect[k] for k in ("y", "top") if k in rect))
-            height = next((rect[k] for k in ("h", "height") if k in rect), None)
             if height is None:
                 bottom = next((rect[k] for k in ("b", "bottom") if k in rect))
                 height = bottom - top + 1
+
             rect = (left, top, width, height)
 
-        rect = [int(v) for v in rect]
-        self.left = rect[0]
-        self.top = rect[1]
-        self.width = rect[2]
-        self.height = rect[3]
+        self.left = int(rect[0])
+        self.top = int(rect[1])
+        self.width = ceil(rect[0] + rect[2]) - self.left
+        self.height = ceil(rect[1] + rect[3]) - self.top
 
     def __eq__(self, value):
         if isinstance(value, Rect):
