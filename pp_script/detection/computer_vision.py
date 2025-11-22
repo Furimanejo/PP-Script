@@ -114,6 +114,10 @@ class ComputerVision:
                 )
             )
 
+        if capture_rect.width <= 1 or capture_rect.height <= 1:
+            # Invalid capture rect, don't try capture
+            return False
+
         if self._enabled or img is not None:
             self._capture = Capture(rect=capture_rect, offsets=offsets, img=img)
             if debug:

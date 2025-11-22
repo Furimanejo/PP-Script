@@ -209,10 +209,6 @@ def get_window_info(regex: str):
                 rect.bottom - rect.top,
             )
         )
-        # Rect can be {'left': -32000, 'top': -32000, 'width': 1, 'height': 1} on minimized windows
-        if rect.left <= 0 and rect.top <= 0:
-            rect = None
-
         focused = window.isActive
         title = window.title
 

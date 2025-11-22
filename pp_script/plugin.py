@@ -102,23 +102,23 @@ class Plugin:
     def _update_focus_and_rect(self):
         if self._target_window_regex is not None:
             rect, focused, title = get_window_info(self._target_window_regex)
-            if rect is None:
+            if title is None:
+                message = f"Target window '{self._target_window_regex}' not found, targeting monitor {self._target_monitor} instead"
                 rect = get_monitor_rect(self._target_monitor)
-                message = f"Target window '{self._target_window_regex}' not found"
-                message += f", targeting monitor {self._target_monitor} instead"
             else:
                 message = f"Targeting window '{title}'"
+
             if self._force_focus:
                 focused = True
                 message += f", force focused"
             else:
                 message += ", focused" if focused else ", unfocused"
         else:
+            message = f"Targeting monitor {self._target_monitor}, focused (always)"
             rect = get_monitor_rect(self._target_monitor)
             focused = True
-            message = f"Targeting monitor {self._target_monitor}, focused (always)"
 
-        message += f", rect = {rect}"
+        message += f"\nRect = {rect}"
         return rect, focused, message
 
     def _raise_event(self, values: dict):
