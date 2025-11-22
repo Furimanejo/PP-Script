@@ -70,11 +70,11 @@ class Plugin:
         self._target_window_regex = data.get("target_window")
 
         events: dict = data.get("events", {})
-        for name, values in events.items():
-            assert isinstance(name, str)
-            values: dict
-            values.setdefault("name", name)
-            self._event_types[name] = EventType(values)
+        for type_key, values in events.items():
+            assert isinstance(type_key, str), "Event type keys should be strings"
+            assert isinstance(values, dict), "Event type values should be dictionaries"
+            values.setdefault("name", type_key)
+            self._event_types[type_key] = EventType(values)
 
         if cv_values := data.get("cv"):
             self._cv = ComputerVision(cv_values, self.PATH, self.DEBUG_FOLDER)
