@@ -70,13 +70,10 @@ class ImportedPlugin(Plugin):
         super().terminate()
 
 
-def import_plugin_at_folder(folder_path: str) -> typing.Type[ImportedPlugin] | None:
+def try_import_plugin_at_folder(folder_path: str) -> typing.Type[ImportedPlugin] | None:
     try:
         file = read_file_at_folder_or_zip(folder_path, "metadata.yaml")
     except FileNotFoundError:
-        logger.error(
-            f"""Failed to import plugin at {folder_path}, no metadata file found in the folder, check for unwanted nested folders"""
-        )
         return None
 
     metadata: dict = yaml.safe_load(file)

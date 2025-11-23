@@ -26,6 +26,14 @@ class Plugin:
     PATH: str = None
     DEBUG_FOLDER: str = None
 
+    @classmethod
+    def ID(cls):
+        data = cls.METADATA
+        full_id = f"{data.get("name", "NAME")}"
+        full_id += f" v{data.get("version", "VERSION")}"
+        full_id += f" by {data.get("author", "AUTHOR")}"
+        return full_id
+
     def __init__(self):
         self._event_types: dict[str:EventType] = {}
         super().__init__()
