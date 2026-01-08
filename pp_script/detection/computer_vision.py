@@ -189,6 +189,14 @@ class ComputerVision:
         if t := template_img.dtype != np.uint8:
             raise Exception(f"Unexpected image type {t}")
 
+        if (
+            template_img.shape[0] > region_img.shape[0]
+            or template_img.shape[1] > region_img.shape[1]
+        ):
+            raise Exception(
+                f"Template doesn't fit the region {template_img.shape[:2][::-1]} -> {region_img.shape[:2][::-1]}"
+            )
+
         match_results = cv.matchTemplate(
             region_img, template_img, cv.TM_SQDIFF, mask=template_mask
         )
@@ -332,7 +340,7 @@ class Template:
         self._scaled_and_filtered = {None: template}
         self._scaled_mask = mask
 
-    def scaled_and_filtered(self, filter: callable = None) -> np.ndarray:
+    def scaled_and_filtered(self, filter: callable = None):
         if filter not in self._scaled_and_filtered:
             not_filtered = self._scaled_and_filtered[None]
             self._scaled_and_filtered[filter] = filter(not_filtered)
