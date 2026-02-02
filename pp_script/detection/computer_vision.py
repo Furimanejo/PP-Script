@@ -143,6 +143,11 @@ class ComputerVision:
     def _try_get_region_crop(self, region_name, filter, div, debug):
         region_obj = self._regions[region_name]
         img = None
+
+        assert (
+            region_obj.rect.width > 0 and region_obj.rect.height > 0
+        ), f"Region {region_name} has invalid rect = {region_obj.rect}"
+
         try:
             img = self._capture.get_region_crop(region_obj, filter=filter)
         except Capture.RegionOutOfBounds as e:
