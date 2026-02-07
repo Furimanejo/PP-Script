@@ -5,6 +5,7 @@ import cv2 as cv
 import numpy as np
 import os
 import shutil
+from math import ceil
 
 from pp_script.core import _logger, Rect, read_file_at_folder_or_zip
 
@@ -157,9 +158,9 @@ class ComputerVision:
 
         height, width = img.shape[:2]
         left = int(width * div[0])
-        right = int(width * div[1])
+        right = ceil(width * div[1])
         top = int(height * div[2])
-        bottom = int(height * div[3])
+        bottom = ceil(height * div[3])
 
         if 0 <= left <= right <= width and 0 <= top <= bottom <= height:
             img = img[top:bottom, left:right].copy()
