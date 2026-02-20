@@ -44,6 +44,7 @@ class Plugin:
         self._target_window_regex = None
         self._force_focus = False
         self._target_monitor = 1
+        self._last_focus_and_rect_update = 0
         self._last_focus_and_rect_message = None
 
         self._cv: ComputerVision = None
@@ -100,10 +101,14 @@ class Plugin:
         self._update_internals()
 
     def _update_internals(self):
-        self.rect, self.focused, msg = self._update_focus_and_rect()
-        if msg != self._last_focus_and_rect_message:
-            self._logger.info(msg=msg)
-            self._last_focus_and_rect_message = msg
+        now = get_time()
+        if now - self._last_focus_and_rect_update > 1.0:
+            self._last_focus_and_rect_update = now
+            self.rect, self.focused, msg = self._update_focus_and_rect()
+            if msg != self._last_focus_and_rect_message:
+                self._logger.info(msg=msg)
+                self._last_focus_and_rect_message = msg
+
         self._cv and self._cv.update(self.rect, self.focused)
         self._pmr and self._pmr.update()
 
