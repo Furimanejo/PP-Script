@@ -109,8 +109,10 @@ class Plugin:
                 self._logger.info(msg=msg)
                 self._last_focus_and_rect_message = msg
 
-        self._cv and self._cv.update(self.rect, self.focused)
-        self._pmr and self._pmr.update()
+        if self._cv:
+            self._cv.update(self.rect, self.focused)
+        if self._pmr:
+            self._pmr.update()
 
     def _update_focus_and_rect(self):
         if self._target_window_regex is not None:

@@ -60,7 +60,8 @@ class ImportedPlugin(Plugin):
     def update(self):
         super().update()
         try:
-            self._imported_update and self._imported_update()
+            if self._imported_update:
+                self._imported_update()
             pass
         except Exception as e:
             tb = traceback.format_exc()
