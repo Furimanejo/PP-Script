@@ -67,7 +67,7 @@ class PPVar:
     def value(self):
         return self._value
 
-    def update(self, new_value: float) -> Any:
+    def update(self, new_value: float | None) -> Any:
         if new_value is None:
             self._buffer = {}
             self._value = None

@@ -22,7 +22,7 @@ from pp_script.detection.http import HTTPHandler
 
 
 class Plugin:
-    METADATA: dict = None
+    METADATA: dict = {}
     PATH: str = None
     DEBUG_FOLDER: str = None
 
