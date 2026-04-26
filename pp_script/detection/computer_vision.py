@@ -6,6 +6,7 @@ import numpy as np
 import os
 import shutil
 from math import ceil
+from time import perf_counter
 
 from pp_script.core import _logger, Rect, read_file_at_folder_or_zip
 
@@ -15,8 +16,8 @@ _logger = _logger.getChild("cv")
 class ComputerVision:
     def __init__(self, cv_values: dict, load_path: str, debug_path: str):
         self._load_path = load_path
-        self._capture: Capture = None
-        self._rect: Rect = None
+        self._capture: Capture = None  # type: ignore
+        self._rect: Rect = None  # type: ignore
         self._enabled = False
 
         debug_path = os.path.join(debug_path, "cv")
@@ -24,7 +25,6 @@ class ComputerVision:
             shutil.rmtree(debug_path)
         except:
             pass
-        os.makedirs(debug_path, exist_ok=True)
         self._debug_folder = debug_path
 
         cv_values = copy.deepcopy(cv_values)
@@ -64,7 +64,7 @@ class ComputerVision:
             self._templates[name] = Template(values, folder_path=load_path)
 
     def update(self, rect: Rect, enable: bool):
-        self._capture = None
+        self._capture = None  # type: ignore
         self._enabled = enable
         self._try_update_rect(rect=rect)
 
@@ -88,7 +88,12 @@ class ComputerVision:
         bottom = max([r.bottom for r in region_rects])
         return left, top, right, bottom
 
-    def capture(self, regions: tuple[str] = (), file: str = None, debug=False):
+    def capture(
+        self,
+        regions: tuple[str] = (),
+        file: str = None,
+        debug=False,
+    ):
         regions = sorted(regions)
 
         capture_rect = self._rect
@@ -131,7 +136,9 @@ class ComputerVision:
                     right += -self._capture._offsets[0] - 1
                     bottom += -self._capture._offsets[1] - 1
                     cv.rectangle(img, (left, top), (right, bottom), (0, 255, 0), 1)
-                self._save_image(img, f"capture {regions_text}")
+
+                second = int(perf_counter())
+                self._save_image(img, f"capture{second}  {regions_text}")
 
         return self._capture is not None
 
@@ -234,6 +241,7 @@ class ComputerVision:
         return np.count_nonzero(region_crop) / region_crop.size
 
     def _save_image(self, image, name):
+        os.makedirs(self._debug_folder, exist_ok=True)
         path = os.path.join(self._debug_folder, f"{name}.png")
         if len(image.shape) == 2:
             cv.imwrite(path, image)
