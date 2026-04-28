@@ -5,9 +5,13 @@ import zipfile
 from math import ceil
 from typing import Any
 from pywinctl import getWindowsWithTitle, Re
-from time import perf_counter as get_time
+from time import perf_counter
 
 _logger = logging.getLogger().getChild("pp_script")
+
+
+def get_time() -> float:
+    return perf_counter()
 
 
 class EventType:

@@ -23,8 +23,8 @@ from pp_script.detection.http import HTTPHandler
 
 class Plugin:
     METADATA: dict = {}
-    PATH: str = None
-    DEBUG_FOLDER: str = None
+    PATH: str = None  # type: ignore
+    DEBUG_FOLDER: str = None  # type: ignore
 
     @classmethod
     def ID(cls):
@@ -35,20 +35,20 @@ class Plugin:
         return full_id
 
     def __init__(self):
-        self._event_types: dict[str:EventType] = {}
+        self._event_types: dict[str, EventType] = {}
         super().__init__()
         self._logger = _logger.getChild(self.METADATA.get("name", "plugin"))
 
-        self.rect: Rect = None
-        self.focused: bool = None
+        self.rect: Rect = None  # type: ignore
+        self.focused: bool = None  # type: ignore
         self._target_window_regex = None
         self._force_focus = False
         self._target_monitor = 1
         self._last_focus_and_rect_update = 0
         self._last_focus_and_rect_message = None
 
-        self._cv: ComputerVision = None
-        self._pmr: ProcessMemoryReader = None
+        self._cv: ComputerVision = None  # type: ignore
+        self._pmr: ProcessMemoryReader = None  # type: ignore
         self._http_handler = None
 
         self.events: dict[typing.Any, Event] = {}
@@ -59,6 +59,7 @@ class Plugin:
             "raise_event": self._raise_event,
             "log_debug": self._logger.debug,
             "get_time": get_time,
+            "plugin_is_focused": self._is_focused,
             "PPVar": PPVar,
             # CV
             "capture": self.capture,
@@ -96,15 +97,36 @@ class Plugin:
 
         self._update_internals()
 
+    def _is_focused(self) -> bool:
+        return self.focused
+
     def update(self):
+        if self._http_handler:
+            self._http_handler.thread_lock.acquire()
         self.events = {}
         self._update_internals()
+
+        # import requests
+
+        # try:
+        #     response = requests.post(
+        #         url="http://127.0.0.1:2999",
+        #         timeout=(2, 3),
+        #         json=["a", "b"],
+        #     )
+        #     print(response)
+        # except Exception as e:
+        #     print(e)
+
+    def post_update(self):
+        if self._http_handler:
+            self._http_handler.thread_lock.release()
 
     def _update_internals(self):
         now = get_time()
         if now - self._last_focus_and_rect_update > 1.0:
             self._last_focus_and_rect_update = now
-            self.rect, self.focused, msg = self._update_focus_and_rect()
+            self.rect, self.focused, msg = self._update_focus_and_rect()  # type: ignore
             if msg != self._last_focus_and_rect_message:
                 self._logger.info(msg=msg)
                 self._last_focus_and_rect_message = msg
@@ -139,9 +161,13 @@ class Plugin:
     def _raise_event(self, values: dict):
         event_id = values.pop("id", uuid4())
         if event_id in self.events:
-            raise Exception(f"2 events were raised with the same ID ({event_id})")
+            self._logger.warning(
+                f"Raising an event with ID={event_id}, an event with that ID was already raised this update and will be overwritten"
+            )
         type_name = values.pop("type", None)
-        event_type = None if type_name is None else self._event_types[type_name]
+        event_type = None
+        if type_name is not None:
+            event_type = self._event_types[type_name]
         event = Event(event_type, values)
         self.events[event_id] = event
 
@@ -156,7 +182,12 @@ class Plugin:
             raise Exception("Internal CV object was not initialized.")
         return self._cv
 
-    def capture(self, regions: tuple[str] = (), file: str = None, debug=False) -> bool:
+    def capture(
+        self,
+        regions: tuple[str] = (),  # type: ignore
+        file: str = None,  # type: ignore
+        debug=False,
+    ) -> bool:
         return self.cv.capture(regions=regions, file=file, debug=debug)
 
     def match_template(
@@ -206,5 +237,5 @@ class Plugin:
             raise Exception("Internal HTTP object was not initialized.")
         return self._http_handler
 
-    def http_get(self, path_name: str) -> dict:
-        return self.http_handler.get(path_name=path_name)
+    def http_get(self, url: str, timeout=0.1) -> dict:
+        return self.http_handler.get(url=url, timeout=timeout)

@@ -10,7 +10,37 @@ from RestrictedPython.Guards import (
     full_write_guard,
 )
 
-restricted_python_globals = safe_globals.copy() | limited_builtins.copy()
+
+def _inplacevar_(op, var, expr):
+    if op == "+=":
+        return var + expr
+    elif op == "-=":
+        return var - expr
+    elif op == "*=":
+        return var * expr
+    elif op == "/=":
+        return var / expr
+    elif op == "%=":
+        return var % expr
+    elif op == "**=":
+        return var**expr
+    elif op == "<<=":
+        return var << expr
+    elif op == ">>=":
+        return var >> expr
+    elif op == "|=":
+        return var | expr
+    elif op == "^=":
+        return var ^ expr
+    elif op == "&=":
+        return var & expr
+    elif op == "//=":
+        return var // expr
+    elif op == "@=":
+        return var @ expr
+
+
+restricted_python_globals: dict = safe_globals.copy() | limited_builtins.copy()
 restricted_python_globals["_getiter_"] = default_guarded_getiter
 restricted_python_globals["_getitem_"] = default_guarded_getitem
 restricted_python_globals["_iter_unpack_sequence_"] = guarded_iter_unpack_sequence
@@ -20,8 +50,9 @@ restricted_python_globals["min"] = min
 restricted_python_globals["max"] = max
 restricted_python_globals["len"] = len
 restricted_python_globals["enumerate"] = enumerate
+restricted_python_globals["_inplacevar_"] = _inplacevar_
 
-CURRENT_PP_SCRIPT_VERSION = 2
+CURRENT_PP_SCRIPT_VERSION = 3
 from pp_script.core import _logger as parent_logger, read_file_at_folder_or_zip
 
 logger = parent_logger.getChild("import")
@@ -31,7 +62,7 @@ from pp_script.plugin import Plugin
 class ImportedPlugin(Plugin):
     def __init__(self):
         super().__init__()
-        script_name = self.METADATA.get("script")
+        script_name: str = self.METADATA.get("script")  # type: ignore
         script = read_file_at_folder_or_zip(self.PATH, script_name)
         script = script.decode("utf-8")
         # Developers might want import statements for static analysis and
