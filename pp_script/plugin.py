@@ -37,6 +37,7 @@ class Plugin:
     def __init__(self):
         self._event_types: dict[str, EventType] = {}
         super().__init__()
+        self._lib_version = self.METADATA.get("req_lib_version", 9999)
         self._logger = _logger.getChild(self.METADATA.get("name", "plugin"))
 
         self.rect: Rect = None  # type: ignore
@@ -49,7 +50,7 @@ class Plugin:
 
         self._cv: ComputerVision = None  # type: ignore
         self._pmr: ProcessMemoryReader = None  # type: ignore
-        self._http_handler = None
+        self._http_handler: HTTPHandler = None  # type: ignore
 
         self.events: dict[typing.Any, Event] = {}
 
@@ -70,9 +71,11 @@ class Plugin:
             "cv_to_gray": cv_to_gray,
             # Process Memory Reading
             "read_pointer": self.read_pointer,
-            # HTTP
-            "http_get": self.http_get,
         }
+        if self._lib_version <= 2:
+            attr["http_get"] = self._http_get_v2
+        else:
+            attr["http_get"] = self.http_get
 
         return attr
 
@@ -93,7 +96,11 @@ class Plugin:
             self._pmr = ProcessMemoryReader(pmr_values, self._logger)
 
         if http_values := data.get("http"):
-            self._http_handler = HTTPHandler(http_values, self._logger)
+            self._http_handler = HTTPHandler(
+                http_values,
+                self._logger,
+                self._lib_version,
+            )
 
         self._update_internals()
 
@@ -105,18 +112,6 @@ class Plugin:
             self._http_handler.thread_lock.acquire()
         self.events = {}
         self._update_internals()
-
-        # import requests
-
-        # try:
-        #     response = requests.post(
-        #         url="http://127.0.0.1:2999",
-        #         timeout=(2, 3),
-        #         json=["a", "b"],
-        #     )
-        #     print(response)
-        # except Exception as e:
-        #     print(e)
 
     def post_update(self):
         if self._http_handler:
@@ -239,3 +234,6 @@ class Plugin:
 
     def http_get(self, url: str, timeout=0.1) -> dict:
         return self.http_handler.get(url=url, timeout=timeout)
+
+    def _http_get_v2(self, path_name: str) -> dict:
+        return self.http_handler._get_v2(path_name=path_name)

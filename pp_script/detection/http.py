@@ -15,13 +15,22 @@ def ensure_can_bind_to(address: tuple[str, int]):
 
 
 class HTTPHandler:
-    def __init__(self, values: dict, logger: logging.Logger):
+    def __init__(self, values: dict, logger: logging.Logger, lib_version: int):
         self._logger = logger.getChild("http")
+        self._LIB_VERSION = lib_version
+
         self.thread_lock = threading.Lock()
-        self._port = int(values["port"])
         self._server: HTTPServer = None  # type: ignore
         if handle_content := values.get("handle_content"):
-            self._launch_server(handle_content)
+            port = int(values["port"])
+            self._launch_server(port, handle_content)
+
+        if self._LIB_VERSION <= 2:
+            port = int(values["port"])
+            self._paths = {}
+            for name, path in values.get("paths", {}).items():
+                assert isinstance(path, str)
+                self._paths[name] = f"https://127.0.0.1:{port}/{path}"
 
     def get(self, url: str, timeout=0.1) -> dict:
         ALLOWED_URL_STARTS = [
@@ -40,23 +49,35 @@ class HTTPHandler:
         except Exception as e:
             return {"exception": str(e)}
 
-    def _launch_server(self, handle_content):
-        address = ("localhost", self._port)
+    def _get_v2(self, path_name):
+        url = self._paths[path_name]
+        try:
+            response = requests.get(url=url, verify=False, timeout=0.1)
+            if 200 <= response.status_code <= 204:
+                return {"http_status": response.status_code, "data": response.json()}
+            return response.json()
+        except Exception as e:
+            return {"exception": str(e)}
+
+    def _launch_server(self, port: int, handle_content):
+        address = ("localhost", port)
         try:
             ensure_can_bind_to(address=address)
         except Exception as e:
             raise Exception(f"Failed to bind to address={address}: {e}") from e
 
         lock = self.thread_lock
+        LIB_VERSION = self._LIB_VERSION
 
         class POSTHandler(BaseHTTPRequestHandler):
             def do_POST(self):
                 content_len = int(self.headers.get("Content-Length", 0))
                 content = self.rfile.read(content_len)
+                print(content)
                 content_type = self.headers.get("Content-Type", "")
                 if content_type.startswith("text/plain"):
                     content = content.decode("utf-8")
-                elif content_type.startswith("application/json"):
+                elif content_type.startswith("application/json") and LIB_VERSION >= 3:
                     content = json.loads(content)
 
                 response = b"PP OK"
