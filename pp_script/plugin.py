@@ -37,7 +37,7 @@ class Plugin:
     def __init__(self):
         self._event_types: dict[str, EventType] = {}
         super().__init__()
-        self._lib_version = self.METADATA.get("req_lib_version", 9999)
+        self._lib_version = self.METADATA.get("req_lib_ver", 9999)
         self._logger = _logger.getChild(self.METADATA.get("name", "plugin"))
 
         self.rect: Rect = None  # type: ignore
