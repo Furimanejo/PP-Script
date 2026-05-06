@@ -127,8 +127,8 @@ class ComputerVision:
         if self._enabled or img is not None:
             self._capture = Capture(rect=capture_rect, offsets=offsets, img=img)
             if debug:
-                regions_text = "_".join(regions)
                 img = self._capture._captured_image.copy()
+
                 for region in self._regions.values():
                     left, top, right, bottom = region.rect.as_bbox()
                     left += -self._capture._offsets[0]
@@ -138,7 +138,11 @@ class ComputerVision:
                     cv.rectangle(img, (left, top), (right, bottom), (0, 255, 0), 1)
 
                 second = int(perf_counter())
-                self._save_image(img, f"capture{second}  {regions_text}")
+                file_name = f"capture {second}"
+                if regions:
+                    file_name += " " + "+".join(regions)
+
+                self._save_image(img, file_name)
 
         return self._capture is not None
 
