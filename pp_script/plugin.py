@@ -123,7 +123,10 @@ class Plugin:
             self._last_focus_and_rect_update = now
             self.rect, self.focused, msg = self._update_focus_and_rect()  # type: ignore
             if msg != self._last_focus_and_rect_message:
-                self._logger.info(msg=msg)
+                if self.focused:
+                    self._logger.info(msg=msg)
+                else:
+                    self._logger.warning(msg=msg)
                 self._last_focus_and_rect_message = msg
 
         if self._cv:
