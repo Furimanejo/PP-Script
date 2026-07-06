@@ -89,13 +89,13 @@ class Plugin:
             values.setdefault("name", type_key)
             self._event_types[type_key] = EventType(values)
 
-        if cv_values := data.get("cv"):
+        if (cv_values := data.get("cv")) is not None:
             self._cv = ComputerVision(cv_values, self.PATH, self.DEBUG_FOLDER)
 
-        if pmr_values := data.get("pmr"):
+        if (pmr_values := data.get("pmr")) is not None:
             self._pmr = ProcessMemoryReader(pmr_values, self._logger)
 
-        if http_values := data.get("http"):
+        if (http_values := data.get("http")) is not None:
             self._http_handler = HTTPHandler(
                 http_values,
                 self._logger,
