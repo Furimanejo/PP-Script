@@ -383,7 +383,7 @@ class Template:
             template = cv.resize(
                 self._base_image,  # type: ignore
                 (scaled_w, scaled_h),
-                interpolation=cv.INTER_LINEAR_EXACT,
+                interpolation=cv.INTER_NEAREST_EXACT,
             )
             mask = cv.resize(
                 mask,
