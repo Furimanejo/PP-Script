@@ -161,7 +161,9 @@ class Plugin:
         return rect, focused, message
 
     def _raise_event(self, values: dict):
-        event_id = values.pop("id", uuid4())
+        event_id = values.pop("id", uuid4().hex)
+        if event_id is not str:
+            event_id = str(event_id)
         if event_id in self.events:
             self._logger.warning(
                 f"Raising an event with ID={event_id}, an event with that ID was already raised this update and will be overwritten"
